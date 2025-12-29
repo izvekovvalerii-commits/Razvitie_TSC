@@ -70,4 +70,38 @@ public class TasksController : ControllerBase
         await _context.SaveChangesAsync();
         return NoContent();
     }
+
+    [HttpDelete("cleanup-old")]
+    public async Task<IActionResult> CleanupOldTasks()
+    {
+        var oldTasks = await _context.ProjectTasks
+            .Where(t => t.ResponsibleUserId == null)
+            .ToListAsync();
+        
+        _context.ProjectTasks.RemoveRange(oldTasks);
+        await _context.SaveChangesAsync();
+        
+        return Ok(new { 
+            message = $"Удалено {oldTasks.Count} старых задач без ResponsibleUserId",
+            deletedCount = oldTasks.Count 
+        });
+    }
+
+    [HttpGet("debug-assignments")]
+    public async Task<IActionResult> DebugAssignments()
+    {
+        var tasks = await _context.ProjectTasks
+            .OrderByDescending(t => t.Id)
+            .Take(10)
+            .Select(t => new {
+                t.Id,
+                t.Name,
+                t.Responsible,
+                t.ResponsibleUserId,
+                t.CreatedAt
+            })
+            .ToListAsync();
+        
+        return Ok(tasks);
+    }
 }

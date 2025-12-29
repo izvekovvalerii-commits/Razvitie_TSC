@@ -11,17 +11,24 @@ export class DocumentsService {
 
     constructor(private http: HttpClient) { }
 
-    upload(projectId: number, file: File, type: string): Observable<ProjectDocument> {
+    upload(projectId: number, file: File, type: string, taskId?: number): Observable<ProjectDocument> {
         const formData = new FormData();
         formData.append('projectId', projectId.toString());
         formData.append('file', file);
         formData.append('type', type);
+        if (taskId) {
+            formData.append('taskId', taskId.toString());
+        }
 
         return this.http.post<ProjectDocument>(`${this.apiUrl}/upload`, formData);
     }
 
     getByProject(projectId: number): Observable<ProjectDocument[]> {
         return this.http.get<ProjectDocument[]>(`${this.apiUrl}/project/${projectId}`);
+    }
+
+    getByTask(taskId: number): Observable<ProjectDocument[]> {
+        return this.http.get<ProjectDocument[]>(`${this.apiUrl}/task/${taskId}`);
     }
 
     delete(id: number): Observable<void> {

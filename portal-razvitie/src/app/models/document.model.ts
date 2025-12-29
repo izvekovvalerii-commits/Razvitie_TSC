@@ -1,6 +1,7 @@
 export interface ProjectDocument {
     id: number;
     projectId: number;
+    taskId?: number;
     name: string;
     type: string;
     uploadDate: string;

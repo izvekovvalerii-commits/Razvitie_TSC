@@ -12,6 +12,33 @@
 
 <body>
   <app-root></app-root>
+
+  <script>
+    // Theme toggle functionality
+    function toggleTheme() {
+      const body = document.body;
+      const miniIcon = document.getElementById('miniThemeIcon');
+      const isDark = body.classList.toggle('dark-theme');
+
+      // Update icon
+      const newIcon = isDark ? '🌙' : '☀️';
+      if (miniIcon) miniIcon.textContent = newIcon;
+
+      // Save preference
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+
+    // Load saved theme on page load
+    (function () {
+      const savedTheme = localStorage.getItem('theme');
+      const miniIcon = document.getElementById('miniThemeIcon');
+
+      if (savedTheme === 'dark') {
+        document.body.classList.add('dark-theme');
+        if (miniIcon) miniIcon.textContent = '🌙';
+      }
+    })();
+  </script>
 </body>
 
 </html>

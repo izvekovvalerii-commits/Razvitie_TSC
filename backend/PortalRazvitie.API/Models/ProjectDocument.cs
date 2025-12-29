@@ -4,6 +4,7 @@ public class ProjectDocument
 {
     public int Id { get; set; }
     public int ProjectId { get; set; }
+    public int? TaskId { get; set; }
     
     // Required metadata
     public string Name { get; set; } = string.Empty;

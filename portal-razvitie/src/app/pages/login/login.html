@@ -1,0 +1,33 @@
+<!-- Login Modal Overlay -->
+<div class="login-overlay">
+    <div class="login-modal">
+        <div class="login-header">
+            <div class="logo">
+                <img src="/images/chizhik-bird.png" alt="Чижик" class="chizhik-logo">
+            </div>
+            <h1>Добро пожаловать</h1>
+            <p class="subtitle">Выберите пользователя для входа</p>
+        </div>
+
+        <!-- Quick Login Section -->
+        <div class="users-grid">
+            <div *ngFor="let user of users" class="user-card" (click)="quickLogin(user.id)">
+                <div class="user-icon" [style.background]="getRoleColor(user.role)">
+                    {{ getRoleIcon(user.role) }}
+                </div>
+                <div class="user-info">
+                    <div class="user-name">{{ user.name }}</div>
+                    <div class="user-role" [style.color]="getRoleColor(user.role)">
+                        {{ user.role }}
+                    </div>
+                </div>
+                <div class="login-arrow">→</div>
+            </div>
+        </div>
+
+        <!-- Footer Info -->
+        <div class="login-footer">
+            <p>Портал Развитие • ТС Чижик</p>
+        </div>
+    </div>
+</div>

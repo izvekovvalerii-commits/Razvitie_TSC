@@ -21,7 +21,7 @@ public class DocumentsController : ControllerBase
     // POST: api/documents/upload
     [HttpPost("upload")]
     //[DisableRequestSizeLimit] // Useful for large files
-    public async Task<ActionResult<ProjectDocument>> Upload([FromForm] int projectId, [FromForm] IFormFile file, [FromForm] string type) 
+    public async Task<ActionResult<ProjectDocument>> Upload([FromForm] int projectId, [FromForm] IFormFile file, [FromForm] string type, [FromForm] int? taskId = null) 
     {
         if (file == null || file.Length == 0)
             return BadRequest("Файл не выбран");
@@ -54,6 +54,7 @@ public class DocumentsController : ControllerBase
         var doc = new ProjectDocument
         {
             ProjectId = projectId,
+            TaskId = taskId,
             Name = file.FileName,
             Type = type,
             UploadDate = DateTime.UtcNow,
@@ -85,6 +86,15 @@ public class DocumentsController : ControllerBase
     {
         return await _context.ProjectDocuments
             .Where(d => d.ProjectId == projectId)
+            .OrderByDescending(d => d.UploadDate)
+            .ToListAsync();
+    }
+    
+    [HttpGet("task/{taskId}")]
+    public async Task<ActionResult<IEnumerable<ProjectDocument>>> GetByTask(int taskId)
+    {
+        return await _context.ProjectDocuments
+            .Where(d => d.TaskId == taskId)
             .OrderByDescending(d => d.UploadDate)
             .ToListAsync();
     }

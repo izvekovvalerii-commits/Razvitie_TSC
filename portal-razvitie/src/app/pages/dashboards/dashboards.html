@@ -1,0 +1,108 @@
+<div class="dashboards-page">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">Дашборды</h1>
+            <div class="title-underline"></div>
+            <p class="page-subtitle">Выберите дашборд для просмотра детальной информации</p>
+        </div>
+    </div>
+
+    <!-- Dashboard Grid -->
+    <div class="dashboards-grid">
+        <div class="dashboard-card" *ngFor="let dashboard of dashboards" (click)="openDashboard(dashboard)"
+            [style.--card-color]="dashboard.color">
+
+            <!-- Card Background Gradient -->
+            <div class="card-background"
+                [style.background]="'linear-gradient(135deg, ' + dashboard.gradientFrom + ' 0%, ' + dashboard.gradientTo + ' 100%)'">
+            </div>
+
+            <!-- Card Content -->
+            <div class="card-content">
+                <div class="card-icon">{{ dashboard.icon }}</div>
+
+                <div class="card-info">
+                    <h3 class="card-title">{{ dashboard.title }}</h3>
+                    <p class="card-description">{{ dashboard.description }}</p>
+                </div>
+
+                <!-- Stats -->
+                <div class="card-stats" *ngIf="dashboard.stats && dashboard.stats.length > 0">
+                    <div class="stat-item" *ngFor="let stat of dashboard.stats">
+                        <div class="stat-value">{{ stat.value }}</div>
+                        <div class="stat-label">{{ stat.label }}</div>
+                    </div>
+                </div>
+
+                <!-- Hover Arrow -->
+                <div class="card-arrow">→</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Dashboard Preview -->
+    <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+        <div class="modal-container" (click)="$event.stopPropagation()">
+
+            <!-- Modal Header -->
+            <div class="modal-header" *ngIf="selectedDashboard"
+                [style.background]="'linear-gradient(135deg, ' + selectedDashboard.gradientFrom + ' 0%, ' + selectedDashboard.gradientTo + ' 100%)'">
+                <div class="modal-header-content">
+                    <div class="modal-icon">{{ selectedDashboard.icon }}</div>
+                    <div class="modal-title-section">
+                        <h2 class="modal-title">{{ selectedDashboard.title }}</h2>
+                        <p class="modal-subtitle">{{ selectedDashboard.description }}</p>
+                    </div>
+                </div>
+                <button class="close-btn" (click)="closeModal()">✕</button>
+            </div>
+
+            <!-- Modal Content - This would show the actual dashboard -->
+            <div class="modal-body" *ngIf="selectedDashboard">
+                <!-- Preview/Placeholder Content -->
+                <div class="preview-section">
+                    <div class="preview-header">
+                        <h3>Предварительный просмотр</h3>
+                    </div>
+
+                    <div class="preview-content">
+                        <div class="preview-placeholder">
+                            <div class="placeholder-icon">{{ selectedDashboard.icon }}</div>
+                            <p class="placeholder-text">{{ getDashboardContent(selectedDashboard.id) }}</p>
+                        </div>
+
+                        <!-- Stats Display -->
+                        <div class="modal-stats" *ngIf="selectedDashboard.stats && selectedDashboard.stats.length > 0">
+                            <div class="modal-stat-card" *ngFor="let stat of selectedDashboard.stats">
+                                <div class="modal-stat-value">{{ stat.value }}</div>
+                                <div class="modal-stat-label">{{ stat.label }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Info -->
+                        <div class="quick-info">
+                            <div class="info-item">
+                                <span class="info-icon">📍</span>
+                                <span class="info-text">Маршрут: <strong>{{ selectedDashboard.route }}</strong></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-icon">🎯</span>
+                                <span class="info-text">Быстрый доступ к ключевой информации</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer">
+                <button class="btn-secondary" (click)="closeModal()">Закрыть</button>
+                <button class="btn-primary" (click)="navigateToDashboard()">
+                    <span>Перейти к дашборду</span>
+                    <span class="btn-icon">→</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

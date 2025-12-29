@@ -136,6 +136,9 @@ namespace PortalRazvitie.API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("TaskId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("text");
@@ -159,11 +162,23 @@ namespace PortalRazvitie.API.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("ActualAuditDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("ActualDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<string>("Code")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -173,6 +188,12 @@ namespace PortalRazvitie.API.Migrations
                     b.Property<DateTime>("NormativeDeadline")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("PlannedAuditDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ProjectFolderLink")
+                        .HasColumnType("text");
+
                     b.Property<int>("ProjectId")
                         .HasColumnType("integer");
 
@@ -180,6 +201,15 @@ namespace PortalRazvitie.API.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("ResponsibleUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Stage")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Status")
                         .IsRequired()

@@ -26,12 +26,14 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Seed database
+// Seed database (disabled - only user data)
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     context.Database.Migrate();
-    DbSeeder.SeedStores(context);
+    // DbSeeder.SeedStores(context);
+    // DbSeeder.SeedProjects(context);
+    // DbSeeder.SeedTasks(context);
 }
 
 // Configure middleware

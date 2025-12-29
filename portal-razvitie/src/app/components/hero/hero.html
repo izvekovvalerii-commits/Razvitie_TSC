@@ -1,87 +1,163 @@
-<section class="hero">
-    <div class="container">
-        <div class="hero-content">
-            <div class="hero-text">
-                <h1 class="hero-title">Портал Развитие</h1>
-                <p class="hero-subtitle">Работа с проектами развития ТС Чижик</p>
-                <button class="start-button" (click)="onStartClick()">Старт</button>
+<div class="dashboard-page">
+    <!-- Welcome Banner -->
+    <div class="welcome-banner">
+        <div class="welcome-content">
+            <h1>Добрый день, {{ (currentUser?.name || '').split(' ')[0] }}!</h1>
+            <div class="welcome-meta-row">
+                <div class="live-clock">{{ currentTime | date:'HH:mm' }}</div>
+                <div class="live-date">{{ currentTime | date:'d MMMM yyyy' }}</div>
+                <div class="live-divider">•</div>
+                <div class="tasks-count">У вас {{ activeTasks.length }} задач в работе</div>
+            </div>
+        </div>
+        <div class="quick-actions">
+            <button class="action-btn primary" routerLink="/projects">
+                <span class="icon">🏗️</span> Новый проект
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards Grid -->
+    <div class="kpi-grid">
+        <!-- Projects -->
+        <div class="kpi-card purple" (click)="navigateToProjects()">
+            <div class="kpi-icon-bg">🏢</div>
+            <div class="kpi-content">
+                <div class="kpi-value">{{ projectStats.total }}</div>
+                <div class="kpi-label">Всего проектов</div>
+            </div>
+        </div>
+        <!-- New Tasks -->
+        <div class="kpi-card blue" (click)="navigateToTasksWithFilter('Назначена')">
+            <div class="kpi-icon-bg">🔔</div>
+            <div class="kpi-content">
+                <div class="kpi-value">{{ newTasks.length }}</div>
+                <div class="kpi-label">Новые задачи</div>
+            </div>
+        </div>
+        <!-- Active Tasks -->
+        <div class="kpi-card green" (click)="navigateToTasksWithFilter('В работе')">
+            <div class="kpi-icon-bg">⚡</div>
+            <div class="kpi-content">
+                <div class="kpi-value">{{ activeTasks.length }}</div>
+                <div class="kpi-label">В работе</div>
+            </div>
+        </div>
+        <!-- Overdue -->
+        <div class="kpi-card orange" (click)="navigateToOverdueTasks()">
+            <div class="kpi-icon-bg">🔥</div>
+            <div class="kpi-content">
+                <div class="kpi-value">{{ overdueCount }}</div>
+                <div class="kpi-label">Просрочено</div>
+            </div>
+        </div>
+        <!-- Expiring Soon -->
+        <div class="kpi-card yellow" (click)="navigateToExpiringSoonTasks()">
+            <div class="kpi-icon-bg">⏰</div>
+            <div class="kpi-content">
+                <div class="kpi-value">{{ expiringSoonCount }}</div>
+                <div class="kpi-label">Истекают</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-split">
+        <!-- Left Main Column -->
+        <div class="main-column">
+            <!-- Projects Charts / Status -->
+            <div class="content-block stats-block">
+                <div class="block-header-modern">
+                    <h3>Статус проектов</h3>
+                    <a routerLink="/projects" class="link-simple">Все проекты →</a>
+                </div>
+                <div class="stats-content">
+                    <div class="chart-container">
+                        <!-- Pie Chart Ring -->
+                        <div class="pie-chart" *ngIf="projectStats.total > 0"
+                            [style.background]="'conic-gradient(#4caf50 0% ' + (projectStats.active/projectStats.total*100) + '%, #ff9800 ' + (projectStats.active/projectStats.total*100) + '% ' + ((projectStats.active+projectStats.planning)/projectStats.total*100) + '%, #f44336 ' + ((projectStats.active+projectStats.planning)/projectStats.total*100) + '% 100%)'">
+                            <div class="pie-hole">
+                                <div class="pie-total">{{ projectStats.total }}</div>
+                                <div class="pie-label">Проектов</div>
+                            </div>
+                        </div>
+                        <div class="chart-empty" *ngIf="projectStats.total === 0">Нет данных</div>
+                    </div>
+
+                    <!-- Detailed Stats List -->
+                    <div class="detailed-stats-list">
+                        <div class="stat-row" *ngFor="let stat of detailedStats">
+                            <div class="stat-row-header">
+                                <div class="stat-name-group">
+                                    <span class="dot" [style.background]="stat.color"></span>
+                                    <span class="stat-name">{{ stat.name }}</span>
+                                </div>
+                                <div class="stat-val-group">
+                                    <span class="stat-val">{{ stat.count }}</span>
+                                    <span class="stat-percent">{{ stat.percent }}%</span>
+                                </div>
+                            </div>
+                            <div class="stat-progress-bg">
+                                <div class="stat-progress-bar" [style.width.%]="stat.percent"
+                                    [style.background]="stat.color"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="hero-illustration">
-                <div class="mountain">
-                    <svg viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Tasks List -->
+            <div class="content-block tasks-list-block">
+                <div class="block-header-modern">
+                    <h3>Мои задачи</h3>
+                    <a routerLink="/tasks" class="link-simple">Все задачи →</a>
+                </div>
+                <div class="task-list-modern">
+                    <div *ngFor="let task of myTasks | slice:0:6" class="task-row"
+                        [routerLink]="['/projects', task.projectId]">
+                        <div class="task-status-line" [ngClass]="getStatusClass(task.status)"></div>
+                        <div class="task-main-info">
+                            <div class="task-title">{{ task.name }}</div>
+                            <div class="task-meta">
+                                <span>#{{ task.projectId }}</span> • <span>{{ task.taskType }}</span>
+                            </div>
+                        </div>
+                        <div class="task-right">
+                            <div class="task-deadline-badge" [class.urgent]="getDaysUntilDeadline(task).isUrgent"
+                                [class.overdue]="getDaysUntilDeadline(task).isOverdue">
+                                {{ getDaysUntilDeadline(task).text }}
+                            </div>
+                        </div>
+                    </div>
+                    <div *ngIf="myTasks.length === 0" class="empty-text">Нет активных задач</div>
+                </div>
+            </div>
+        </div>
 
-                        <!-- Clouds -->
-                        <g opacity="1">
-                            <!-- Left Cloud (Main) -->
-                            <path
-                                d="M80 200 Q 60 200 50 180 Q 40 150 70 145 Q 90 120 120 135 Q 150 120 170 145 Q 190 170 170 190 Q 150 210 120 200 Z"
-                                fill="#FFFBE6" />
-
-                            <!-- Higher Middle Cloud -->
-                            <ellipse cx="350" cy="80" rx="40" ry="22" fill="#FFFBE6" />
-                            <ellipse cx="380" cy="90" rx="30" ry="18" fill="#FFFBE6" />
-
-                            <!-- Right Top Cloud (Main) -->
-                            <ellipse cx="700" cy="120" rx="65" ry="35" fill="#FFFBE6" />
-
-                            <!-- Right Lower Cloud -->
-                            <path
-                                d="M720 250 Q 700 250 690 235 Q 680 210 700 205 Q 720 190 750 200 Q 770 190 790 210 Q 800 230 780 245 Q 760 255 720 250 Z"
-                                fill="#FFFBE6" />
-
-                            <!-- Small Peak Cloud -->
-                            <ellipse cx="580" cy="160" rx="25" ry="14" fill="#FFFBE6" />
-                        </g>
-
-                        <!-- COMPOSITE MOUNTAIN LANDSCAPE -->
-
-                        <!-- 1. Left Peak (Smaller) -->
-                        <path d="M 0 600 L 250 350 L 400 500 L 200 600 Z" fill="#fff" stroke="#000" stroke-width="12"
-                            stroke-linejoin="round" />
-
-                        <!-- 2. Main Central Peak (Tallest) -->
-                        <!-- Defined to overlap visually correctly -->
-                        <path d="M 150 600 L 500 80 L 800 550 L 800 600 L 150 600 Z" fill="#fff" stroke="#000"
-                            stroke-width="12" stroke-linejoin="round" />
-
-                        <!-- 3. Shadow/Detail on Left Peak (Black Triangle from ground) -->
-                        <path d="M 100 600 L 230 460 L 280 600 Z" fill="#000" />
-
-                        <!-- 4. Right Side Black Rocks (Jagged) -->
-                        <!-- These sit in front of the white mountain on the right -->
-                        <path d="M 650 600 L 700 450 L 730 480 L 760 350 L 800 450 L 800 600 Z" fill="#000"
-                            stroke="#000" stroke-width="8" stroke-linejoin="round" />
-
-                        <!-- 5. Ground Line to clean up bottom -->
-                        <rect x="0" y="580" width="800" height="20" fill="#000" />
-
-
-
-                        <!-- BIRDS (Updated Positions) -->
-
-                        <!-- Bird 1: Climbing the Left Slope of Main Peak -->
-                        <!-- Moved higher closer to peak (approx 440, 180) -->
-                        <g class="bird bird-climbing">
-                            <g transform="translate(440, 180) rotate(-45)">
-                                <!-- REAL Image from user upload (Background removed) -->
-                                <image href="/images/chizhik_transparent.png" x="-45" y="-50" width="90" height="90" />
-                            </g>
-                        </g>
-
-                        <!-- Bird 2: Climbing the RIGHT Slope -->
-                        <!-- Slope goes down-right. We want bird to look LEFT (at peak) -->
-                        <g class="bird bird-right-slope">
-                            <!-- Translate to slope position (approx 620, 280) -->
-                            <!-- Rotate to match slope angle (approx 45 deg) -->
-                            <!-- Scale -1,1 to mirror image locally so it faces Left -->
-                            <g transform="translate(620, 280) rotate(45) scale(-1, 1)">
-                                <image href="/images/chizhik_transparent.png" x="-45" y="-50" width="90" height="90" />
-                            </g>
-                        </g>
-                    </svg>
+        <!-- Right Side Column -->
+        <div class="side-column">
+            <!-- Activity Feed -->
+            <div class="content-block activity-feed-block">
+                <div class="block-header-modern">
+                    <h3>Последняя активность</h3>
+                </div>
+                <div class="activity-feed">
+                    <div *ngFor="let activity of recentActivities | slice:0:10" class="feed-item">
+                        <div class="feed-avatar" [style.background]="getRoleColor(activity.userRole)">
+                            {{ activity.userName.charAt(0) }}
+                        </div>
+                        <div class="feed-content">
+                            <div class="feed-text">
+                                <strong>{{ activity.userName }}</strong> {{ activity.action }}
+                            </div>
+                            <div class="feed-project-name" *ngIf="activity.projectName">{{ activity.projectName }}</div>
+                            <a [routerLink]="['/projects', activity.projectId]" class="feed-link">{{ activity.taskName
+                                }}</a>
+                            <div class="feed-time">{{ getTimeAgo(activity.timestamp) }}</div>
+                        </div>
+                    </div>
+                    <div *ngIf="recentActivities.length === 0" class="empty-text">Нет активности</div>
                 </div>
             </div>
         </div>
     </div>
-</section>
+</div>

@@ -1,41 +1,97 @@
 <div class="projects-page">
-    <!-- Page Header with Actions -->
+    <!-- Page Header with Filters and Actions -->
     <div class="page-header">
         <div class="header-left">
-            <h1 class="page-title">Проекты</h1>
-            <div class="title-underline"></div>
-            <p class="page-subtitle">{{ projects.length }} {{ projects.length === 1 ? 'проект' : 'проектов' }}</p>
+            <!-- Title Section -->
+            <div class="title-section">
+                <h1 class="page-title">Проекты</h1>
+                <div class="title-underline"></div>
+                <p class="page-subtitle">{{ projects.length }} {{ projects.length === 1 ? 'проект' : 'проектов' }}</p>
+            </div>
+
+            <!-- Compact Filters -->
+            <div class="compact-filters">
+                <select class="filter-select-compact">
+                    <option value="">Все типы</option>
+                    <option *ngFor="let type of projectTypes" [value]="type">{{ type }}</option>
+                </select>
+                <select class="filter-select-compact">
+                    <option value="">Все статусы</option>
+                    <option *ngFor="let status of projectStatuses" [value]="status">{{ status }}</option>
+                </select>
+            </div>
         </div>
-        <div class="header-actions">
-            <button class="create-btn" (click)="openCreateModal()">
-                <span class="btn-icon">+</span>
-                Создать проект
+
+        <!-- View Toggle -->
+        <div class="view-toggle">
+            <button class="toggle-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'">
+                <span class="icon">☰</span>
+            </button>
+            <button class="toggle-btn" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">
+                <span class="icon">⊞</span>
             </button>
         </div>
-    </div>
 
-    <!-- Filters and Search -->
-    <div class="filters-section">
-        <div class="search-box">
+        <!-- Search Box -->
+        <div class="search-box-compact">
             <span class="search-icon">🔍</span>
-            <input type="text" placeholder="Поиск по названию, адресу, ГИС коду..." [(ngModel)]="searchQuery">
+            <input type="text" placeholder="Поиск (ГИС, адрес)..." [(ngModel)]="searchQuery">
         </div>
-        <div class="filters">
-            <select class="filter-select">
-                <option value="">Все типы</option>
-                <option *ngFor="let type of projectTypes" [value]="type">{{ type }}</option>
-            </select>
-            <select class="filter-select">
-                <option value="">Все статусы</option>
-                <option *ngFor="let status of projectStatuses" [value]="status">{{ status }}</option>
-            </select>
-        </div>
+
+        <button *ngIf="canCreateProject()" class="create-btn" (click)="openCreateModal()">
+            <span class="btn-icon">+</span>
+            Создать
+        </button>
     </div>
 
-    <!-- Projects List -->
-    <div class="projects-grid" *ngIf="!loading && projects.length > 0">
+    <!-- Projects Table View -->
+    <div class="projects-table-container" *ngIf="!loading && viewMode === 'table' && filteredProjects.length > 0">
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th style="width: 8%;">ГИС</th>
+                    <th style="width: 20%;">Магазин</th>
+                    <th style="width: 12%;">Тип</th>
+                    <th style="width: 15%;">Статус</th>
+                    <th style="width: 25%;">Адрес</th>
+                    <th style="width: 10%;">Площадь</th>
+                    <th style="width: 10%;">Менеджер</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let project of filteredProjects" (click)="viewProject(project)" class="clickable-row">
+                    <td><span class="code-badge">{{ project.gisCode }}</span></td>
+                    <td class="name-cell">
+                        <span class="project-name-text">{{ project.store?.name || 'Магазин #' + project.storeId
+                            }}</span>
+                        <span class="sub-text">{{ project.store?.city }}</span>
+                    </td>
+                    <td><span class="type-badge">{{ project.projectType }}</span></td>
+                    <td>
+                        <span class="status-badge-sm"
+                            [ngClass]="'status-' + project.status.toLowerCase().replace(/ /g, '-')">
+                            {{ project.status }}
+                        </span>
+                    </td>
+                    <td class="address-cell" title="{{ project.store?.address || project.address }}">
+                        {{ project.store?.address || project.address || '—' }}
+                    </td>
+                    <td>{{ project.store?.totalArea || project.totalArea || 0 }} <span class="unit">м²</span></td>
+                    <td>
+                        <div class="resp-cell">
+                            <div class="avatar-xs">{{ project.mp ? project.mp[0] : '?' }}</div>
+                            <span class="resp-name-sm">{{ project.mp }}</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Projects Grid View -->
+    <div class="projects-grid" *ngIf="!loading && viewMode === 'grid' && filteredProjects.length > 0">
         <!-- Enhanced Project Card -->
-        <div class="project-card-enhanced" *ngFor="let project of projects" (click)="viewProject(project)">
+        <div class="project-card-enhanced" *ngFor="let project of filteredProjects" (click)="viewProject(project)">
             <div class="card-header">
                 <div class="card-title-section">
                     <h3 class="card-title">{{ project.store?.name || 'Магазин #' + project.storeId }}</h3>
@@ -56,6 +112,9 @@
                     <div class="info-label">📍 Адрес</div>
                     <div class="info-value">{{ (project.store?.address || project.address) | slice:0:50 }}...</div>
                 </div>
+                <!-- ... other cols ... -->
+                <!-- Assuming existing content inside card remains mostly same but using filteredProjects -->
+                <!-- I will include full card content to be safe -->
                 <div class="info-col">
                     <div class="info-label">🏙️ Город</div>
                     <div class="info-value">{{ project.store?.city }}</div>
@@ -118,285 +177,17 @@
                 </select>
             </div>
 
+            <div class="form-group">
+                <label>Менеджер проекта (МП) *</label>
+                <select [(ngModel)]="newProject.mp" required>
+                    <option value="">-- Выберите менеджера --</option>
+                    <option *ngFor="let m of managers" [value]="m.name">{{ m.name }}</option>
+                </select>
+            </div>
+
             <div class="modal-actions">
                 <button class="btn-cancel" (click)="closeCreateModal()">Отмена</button>
                 <button class="btn-create" (click)="createProject()">Создать</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Project Card Modal - Improved UX/UI -->
-    <div class="modal" *ngIf="showProjectCard && selectedProject" (click)="closeProjectCard()">
-        <div class="project-card-modal" (click)="$event.stopPropagation()">
-            <!-- Header -->
-            <div class="card-modal-header">
-                <div class="header-left">
-                    <h2>{{ selectedProject.store?.name || 'Проект' }}</h2>
-                    <div class="project-badges">
-                        <span class="badge badge-type">{{ selectedProject.projectType }}</span>
-                        <span class="badge badge-status" [ngClass]="'status-' + selectedProject.status.toLowerCase()">
-                            {{ selectedProject.status }}
-                        </span>
-                    </div>
-                </div>
-                <button class="close-btn" (click)="closeProjectCard()">✕</button>
-            </div>
-
-            <!-- Content -->
-            <div class="card-modal-content">
-                <!-- Main Info Card -->
-                <div class="info-card">
-                    <h3 class="section-title">📋 Основная информация</h3>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <span class="label">Код ГИС</span>
-                            <span class="value">{{ selectedProject.gisCode }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="label">Статус проекта</span>
-                            <select class="status-select" [(ngModel)]="selectedProject.status"
-                                (change)="updateStatus(selectedProject, selectedProject.status)">
-                                <option *ngFor="let status of projectStatuses" [value]="status">{{ status }}</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Object Info Card -->
-                <div class="info-card">
-                    <h3 class="section-title">🏢 Информация об объекте</h3>
-                    <div class="info-grid">
-                        <div class="info-item full-width">
-                            <span class="label">Адрес</span>
-                            <span class="value">{{ selectedProject.store?.address || selectedProject.address }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="label">Город</span>
-                            <span class="value">{{ selectedProject.store?.city }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="label">Регион</span>
-                            <span class="value">{{ selectedProject.store?.region || selectedProject.region }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="label">ЦФО</span>
-                            <span class="value">{{ selectedProject.cfo }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="label">Общая площадь</span>
-                            <span class="value highlight">{{ selectedProject.store?.totalArea ||
-                                selectedProject.totalArea }} м²</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="label">Торговая площадь</span>
-                            <span class="value highlight">{{ selectedProject.store?.tradeArea ||
-                                selectedProject.tradeArea }} м²</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tasks Card -->
-                <div class="info-card">
-                    <h3 class="section-title">📋 Задачи проекта ({{ projectTasks.length }})</h3>
-
-                    <div class="tasks-list" *ngIf="projectTasks.length > 0">
-                        <div class="task-item" *ngFor="let task of projectTasks">
-                            <div class="task-header-row">
-                                <div class="task-name">{{ task.name }}</div>
-                                <span class="task-status-badge" [ngClass]="getTaskStatusClass(task.status)">
-                                    {{ task.status }}
-                                </span>
-                            </div>
-                            <div class="task-details">
-                                <div class="task-detail">
-                                    <span class="detail-icon">👤</span>
-                                    <span>{{ task.responsible }}</span>
-                                </div>
-                                <div class="task-detail">
-                                    <span class="detail-icon">📅</span>
-                                    <span>{{ task.normativeDeadline | date:'dd.MM.yyyy' }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="no-tasks" *ngIf="projectTasks.length === 0">
-                        <p>Задачи пока не созданы</p>
-                        <button class="btn-add-task-inline" (click)="openCreateTaskModal()">
-                            + Создать первую задачу
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Responsible Card -->
-                <div class="info-card">
-                    <h3 class="section-title">👥 Ответственные</h3>
-                    <div class="responsible-grid">
-                        <div class="responsible-item">
-                            <div class="role">МП</div>
-                            <div class="person">{{ selectedProject.mp }}</div>
-                        </div>
-                        <div class="responsible-item">
-                            <div class="role">НОР</div>
-                            <div class="person">{{ selectedProject.nor }}</div>
-                        </div>
-                        <div class="responsible-item">
-                            <div class="role">СтМРиЗ</div>
-                            <div class="person">{{ selectedProject.stMRiZ }}</div>
-                        </div>
-                        <div class="responsible-item">
-                            <div class="role">РНР</div>
-                            <div class="person">{{ selectedProject.rnr }}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Documents Card -->
-                <div class="info-card">
-                    <div class="card-header-flex">
-                        <h3 class="section-title">📂 Документы ({{ documents.length }})</h3>
-                        <label class="btn-upload">
-                            Загрузить документ
-                            <input type="file" (change)="onFileSelected($event)" hidden>
-                        </label>
-                    </div>
-
-                    <div class="upload-form" *ngIf="selectedFile">
-                        <div class="selected-file-info">
-                            <span>{{ selectedFile.name }} ({{ getFriendlyFileSize(selectedFile.size) }})</span>
-                            <button class="btn-text-danger"
-                                style="color:red; border:none; background:none; cursor:pointer;"
-                                (click)="selectedFile = null">✕</button>
-                        </div>
-                        <div class="upload-controls">
-                            <select [(ngModel)]="selectedDocType" class="doc-type-select">
-                                <option *ngFor="let t of docTypes" [value]="t">{{ t }}</option>
-                            </select>
-                            <button class="btn-confirm-upload" (click)="uploadDocument()" [disabled]="isUploading">
-                                {{ isUploading ? 'Загрузка...' : 'Сохранить' }}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="documents-list">
-                        <div class="document-item" *ngFor="let doc of documents">
-                            <div class="doc-icon">📄</div>
-                            <div class="doc-info">
-                                <div class="doc-name">{{ doc.name }}</div>
-                                <div class="doc-meta">
-                                    {{ doc.type }} • v{{ doc.version }} • {{ doc.uploadDate | date:'dd.MM.yyyy' }}
-                                </div>
-                            </div>
-                            <div class="doc-actions">
-                                <button (click)="downloadDoc(doc)" title="Скачать">⬇️</button>
-                                <button (click)="deleteDoc(doc)" title="Удалить" class="btn-delete">🗑️</button>
-                            </div>
-                        </div>
-                        <div *ngIf="documents.length === 0" style="text-align:center; padding:20px; color:#888;">
-                            Нет документов
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer Actions -->
-            <div class="card-modal-footer">
-                <button class="btn-action btn-primary" (click)="openGanttModal()">📊 Просмотреть график задач</button>
-                <button class="btn-action btn-secondary" (click)="openCreateTaskModal()">➕ Добавить задачу</button>
-                <button class="btn-action btn-tertiary" (click)="closeProjectCard()">Закрыть</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Create Task Modal -->
-    <div class="modal" *ngIf="showCreateTaskModal" (click)="closeCreateTaskModal()">
-        <div class="task-modal-content" (click)="$event.stopPropagation()">
-            <h2>✨ Создать задачу</h2>
-            <p class="modal-subtitle">Поля заполнятся автоматически при выборе типа задачи</p>
-
-            <div class="form-group">
-                <label>Тип задачи *</label>
-                <select [(ngModel)]="newTask.taskType" (change)="onTaskTypeChange()" required>
-                    <option value="">-- Выберите тип --</option>
-                    <option *ngFor="let type of taskTypes" [value]="type">{{ type }}</option>
-                </select>
-            </div>
-
-            <div class="form-group" *ngIf="newTask.taskType">
-                <label>Название задачи</label>
-                <input type="text" [(ngModel)]="newTask.name" />
-            </div>
-
-            <div class="form-row" *ngIf="newTask.taskType">
-                <div class="form-group">
-                    <label>Ответственный</label>
-                    <input type="text" [(ngModel)]="newTask.responsible" />
-                </div>
-
-                <div class="form-group">
-                    <label>Нормативный срок</label>
-                    <input type="date" [(ngModel)]="newTask.normativeDeadline" />
-                </div>
-            </div>
-
-            <div class="form-group" *ngIf="newTask.taskType">
-                <label>Статус</label>
-                <select [(ngModel)]="newTask.status">
-                    <option *ngFor="let status of taskStatuses" [value]="status">{{ status }}</option>
-                </select>
-            </div>
-
-            <div class="modal-actions">
-                <button class="btn-cancel" (click)="closeCreateTaskModal()">Отмена</button>
-                <button class="btn-create" (click)="createTask()" [disabled]="!newTask.taskType">Создать задачу</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Gantt Chart Modal -->
-    <div class="modal" *ngIf="showGanttModal" (click)="closeGanttModal()">
-        <div class="gantt-modal-content" (click)="$event.stopPropagation()">
-            <div class="card-modal-header">
-                <div class="header-left">
-                    <h2>График задач</h2>
-                    <p class="gantt-subtitle">{{ selectedProject?.store?.name }}</p>
-                </div>
-                <button class="close-btn" (click)="closeGanttModal()">✕</button>
-            </div>
-
-            <div class="gantt-container" *ngIf="ganttDates.length > 0">
-                <!-- Header Dates -->
-                <div class="gantt-header">
-                    <div class="gantt-task-col">Задача</div>
-                    <div class="gantt-timeline-header">
-                        <div class="gantt-date-cell" *ngFor="let date of ganttDates">
-                            {{ date | date:'dd' }}<br>
-                            <span class="month-label">{{ date | date:'MMM' }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tasks Rows -->
-                <div class="gantt-body">
-                    <div class="gantt-row" *ngFor="let task of projectTasks">
-                        <div class="gantt-task-col task-name-cell" [title]="task.name">
-                            {{ task.name }}
-                        </div>
-                        <div class="gantt-timeline-row">
-                            <!-- Grid lines -->
-                            <div class="gantt-grid-line" *ngFor="let date of ganttDates"></div>
-
-                            <!-- Task Bar -->
-                            <div class="gantt-bar-container" [style.left.px]="getTaskStartOffset(task) * 40"
-                                [style.width.px]="getTaskDuration(task) * 40">
-                                <div class="gantt-bar" [ngClass]="getTaskStatusClass(task.status)"
-                                    [title]="task.name + '\n' + (task.normativeDeadline | date:'dd.MM.yyyy')">
-                                    <span class="bar-label">{{ getTaskDuration(task) }} дн.</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>

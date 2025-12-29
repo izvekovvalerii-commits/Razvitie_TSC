@@ -1,12 +1,126 @@
 <div class="stores-page">
     <div class="page-header">
-        <h1 class="page-title">Магазины</h1>
-        <div class="title-underline"></div>
+        <div class="header-left">
+            <h1 class="page-title">Магазины</h1>
+            <div class="title-underline"></div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <!-- Status Filter -->
+            <div class="filter-dropdown">
+                <button class="filter-dropdown-btn" (click)="toggleStatusDropdown()">
+                    {{ getFilterLabel('status') }}
+                    <span class="dropdown-arrow">{{ statusDropdownOpen ? '▲' : '▼' }}</span>
+                </button>
+                <div class="filter-dropdown-menu" *ngIf="statusDropdownOpen">
+                    <div class="filter-option" *ngFor="let status of statusOptions">
+                        <label class="checkbox-label">
+                            <input type="checkbox" [checked]="selectedStatuses.includes(status)"
+                                (change)="toggleStatus(status)">
+                            <span>{{ status }}</span>
+                        </label>
+                    </div>
+                    <div class="filter-actions" *ngIf="selectedStatuses.length > 0">
+                        <button class="clear-btn" (click)="clearStatusFilter()">Очистить</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Region Filter -->
+            <div class="filter-dropdown">
+                <button class="filter-dropdown-btn" (click)="toggleRegionDropdown()">
+                    {{ getFilterLabel('region') }}
+                    <span class="dropdown-arrow">{{ regionDropdownOpen ? '▲' : '▼' }}</span>
+                </button>
+                <div class="filter-dropdown-menu" *ngIf="regionDropdownOpen">
+                    <div class="filter-option" *ngFor="let region of regionOptions">
+                        <label class="checkbox-label">
+                            <input type="checkbox" [checked]="selectedRegions.includes(region)"
+                                (change)="toggleRegion(region)">
+                            <span>{{ region }}</span>
+                        </label>
+                    </div>
+                    <div class="filter-actions" *ngIf="selectedRegions.length > 0">
+                        <button class="clear-btn" (click)="clearRegionFilter()">Очистить</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- City Filter -->
+            <div class="filter-dropdown">
+                <button class="filter-dropdown-btn" (click)="toggleCityDropdown()">
+                    {{ getFilterLabel('city') }}
+                    <span class="dropdown-arrow">{{ cityDropdownOpen ? '▲' : '▼' }}</span>
+                </button>
+                <div class="filter-dropdown-menu" *ngIf="cityDropdownOpen">
+                    <div class="filter-option" *ngFor="let city of cityOptions">
+                        <label class="checkbox-label">
+                            <input type="checkbox" [checked]="selectedCities.includes(city)"
+                                (change)="toggleCity(city)">
+                            <span>{{ city }}</span>
+                        </label>
+                    </div>
+                    <div class="filter-actions" *ngIf="selectedCities.length > 0">
+                        <button class="clear-btn" (click)="clearCityFilter()">Очистить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <div class="view-toggle">
+                <button class="toggle-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'">
+                    <span class="icon">☰</span>
+                </button>
+                <button class="toggle-btn" [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">
+                    <span class="icon">⊞</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <div class="stores-container" *ngIf="!loading && !error">
-        <div class="stores-grid">
-            <div class="store-card" *ngFor="let store of stores">
+        <!-- List View -->
+        <div class="stores-table-container" *ngIf="viewMode === 'table' && filteredStores.length > 0">
+            <table class="compact-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Название</th>
+                        <th style="width: 10%;">Код</th>
+                        <th style="width: 10%;">Статус</th>
+                        <th style="width: 25%;">Адрес</th>
+                        <th style="width: 15%;">Город</th>
+                        <th style="width: 15%;">Регион</th>
+                        <th style="width: 10%;">Площадь (Общ/Торг)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let store of filteredStores">
+                        <td class="name-cell">
+                            <span class="store-name-text">{{ store.name }}</span>
+                        </td>
+                        <td><span class="code-badge">{{ store.code }}</span></td>
+                        <td>
+                            <span class="status-badge-sm" [ngClass]="getStatusClass(store.status)">
+                                {{ getStatusText(store.status) }}
+                            </span>
+                        </td>
+                        <td class="address-cell" title="{{ store.address }}">
+                            {{ store.address }}
+                        </td>
+                        <td>{{ store.city }}</td>
+                        <td>{{ store.region }}</td>
+                        <td>
+                            {{ store.totalArea }} / {{ store.tradeArea }} <span class="unit">м²</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="stores-grid" *ngIf="viewMode === 'grid' && filteredStores.length > 0">
+            <div class="store-card" *ngFor="let store of filteredStores">
                 <div class="store-header">
                     <h3 class="store-name">{{ store.name }}</h3>
                     <span class="store-status" [ngClass]="getStatusClass(store.status)">
@@ -41,6 +155,10 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="empty-state" *ngIf="filteredStores.length === 0">
+            <p>Магазины не найдены</p>
         </div>
     </div>
 

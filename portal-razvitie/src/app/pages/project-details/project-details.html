@@ -1,0 +1,1235 @@
+<div class="project-details-page">
+    <!-- Header with Back Button and Store Info -->
+    <header class="page-header">
+        <div class="header-main-row">
+            <button class="btn-back" (click)="goBack()">← Назад</button>
+            <h1>{{ project?.store?.name }}</h1>
+
+            <!-- Store Information Inline -->
+            <div class="header-info-inline">
+                <div class="info-item-inline">
+                    <label>КОД ГИС</label>
+                    <span class="value highlight">{{ project?.gisCode }}</span>
+                </div>
+                <div class="info-item-inline">
+                    <label>РЕГИОН</label>
+                    <span class="value">{{ project?.region || project?.store?.region }}</span>
+                </div>
+                <div class="info-item-inline">
+                    <label>АДРЕС</label>
+                    <span class="value">{{ project?.address || project?.store?.address }}</span>
+                </div>
+                <div class="info-item-inline">
+                    <label>ПЛОЩАДЬ</label>
+                    <span class="value highlight">{{ project?.totalArea || project?.store?.totalArea }} м²</span>
+                </div>
+            </div>
+
+            <!-- Status Badge with Custom Dropdown -->
+            <div class="status-wrapper" *ngIf="project">
+                <div class="custom-status-dropdown" (click)="toggleStatusDropdown()">
+                    <div class="status-current" [style.background]="getStatusColor(project.status)"
+                        [class.yellow-status]="project.status === 'Аудит'">
+                        {{ project.status }}
+                    </div>
+                    <div class="status-dropdown-menu" *ngIf="statusDropdownOpen">
+                        <div *ngFor="let status of projectStatuses" class="status-option"
+                            [class.selected]="project.status === status"
+                            (click)="selectStatus(status); $event.stopPropagation()">
+                            <span class="check-icon" *ngIf="project.status === status">✓</span>
+                            {{ status }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-delete-project" (click)="deleteProject()" title="Удалить проект">🗑️</button>
+        </div>
+    </header>
+
+    <div class="loading-spinner" *ngIf="loading">Загрузка...</div>
+
+    <div class="project-content" *ngIf="!loading && project">
+
+        <div class="project-main-grid">
+
+            <!-- Sidebar Column (Left) -->
+            <div class="sidebar-column">
+                <!-- Team -->
+                <div class="info-card">
+                    <h3 class="section-title" style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size: 18px;">👥</span> Команда проекта
+                    </h3>
+                    <div class="responsible-list" style="display: flex; flex-direction: column; gap: 8px;">
+                        <div class="team-card" *ngFor="let member of projectTeam"
+                            style="display: flex; align-items: center; gap: 12px; padding: 10px; background: white; border: 1px solid #e2e8f0; border-radius: 8px;">
+                            <div class="member-avatar" [style.background-color]="member.color"
+                                style="width: 36px; height: 36px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0;">
+                                {{ member.initials }}
+                            </div>
+                            <div class="member-info" style="display: flex; flex-direction: column; flex: 1;">
+                                <div style="font-weight: 600; font-size: 14px; color: #1e293b;">{{ member.name }}</div>
+                                <div
+                                    style="font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 6px;">
+                                    <span
+                                        style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 500;">{{
+                                        member.role }}</span>
+                                    <span>•</span>
+                                    <span>{{ member.phone }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="no-data" *ngIf="projectTeam.length === 0"
+                            style="padding: 15px; color: #94a3b8; font-size: 12px; text-align: center; border: 1px dashed #cbd5e1; border-radius: 6px; background: #f8fafc;">
+                            Нет назначенных ответственных
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documents -->
+                <div class="info-card">
+                    <div class="card-header-flex"
+                        style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="section-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 18px;">📂</span> Документы проекта
+                        </h3>
+                        <button class="btn-primary small" (click)="fileInput.click()"
+                            style="width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 18px; line-height: 1;">+</button>
+                        <input #fileInput type="file" (change)="onFileSelected($event); uploadDocument()"
+                            style="display:none">
+                    </div>
+
+                    <div class="docs-list" *ngIf="documents.length > 0"
+                        style="display: flex; flex-direction: column; gap: 8px;">
+                        <div class="attachment-item" *ngFor="let doc of documents"
+                            style="padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; background:#fff; align-items: center;">
+                            <div class="attachment-info" style="gap: 10px; flex: 1; min-width: 0;">
+                                <span class="file-icon" style="font-size: 16px; color: #64748b;">📄</span>
+                                <span class="file-name" (click)="downloadDoc(doc)"
+                                    style="font-size: 13px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{
+                                    doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить"
+                                style="width: 24px; height: 24px; font-size: 18px; margin-left: 8px;">×</button>
+                        </div>
+                    </div>
+
+                    <div class="no-data" *ngIf="documents.length === 0"
+                        style="padding: 15px; color: #94a3b8; font-size: 12px; text-align: center; border: 1px dashed #cbd5e1; border-radius: 6px; background: #f8fafc;">
+                        Нет загруженных документов
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Column (Right) -->
+            <div class="main-column">
+                <!-- Gantt Chart Section -->
+                <div class="info-card gantt-wrapper">
+                    <div class="card-header-flex" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <div style="display:flex; align-items:center; gap:16px;">
+                            <h3 class="section-title" style="margin:0; white-space: nowrap;">📊 График</h3>
+
+                            <!-- View Mode Switcher (Segmented Control) -->
+                            <div class="gantt-view-switcher" *ngIf="isGanttExpanded">
+                                <button [class.active]="ganttViewMode === 'day'"
+                                    (click)="setGanttViewMode('day')">День</button>
+                                <button [class.active]="ganttViewMode === 'week'"
+                                    (click)="setGanttViewMode('week')">Неделя</button>
+                                <button [class.active]="ganttViewMode === 'month'"
+                                    (click)="setGanttViewMode('month')">Месяц</button>
+                                <button [class.active]="ganttViewMode === 'quarter'"
+                                    (click)="setGanttViewMode('quarter')">Квартал</button>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap: 16px;">
+                            <div class="legend" *ngIf="isGanttExpanded">
+                                <span class="legend-item"><span class="dot planned"></span> План</span>
+                                <span class="legend-item"><span class="dot active"></span> В работе</span>
+                                <span class="legend-item"><span class="dot done"></span> Готово</span>
+                            </div>
+                            <button class="btn-toggle-gantt" (click)="toggleGantt()" title="Свернуть/Развернуть">
+                                {{ isGanttExpanded ? '▲' : '▼' }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="gantt-scroll-area inline-gantt" *ngIf="ganttDates.length > 0 && isGanttExpanded">
+                        <!-- Header -->
+                        <div class="gantt-header-row">
+                            <div class="gantt-col-name">Задача</div>
+                            <div class="gantt-timeline-header">
+                                <div class="date-col" *ngFor="let d of ganttDates" [class.today-col]="isToday(d)"
+                                    [style.min-width.px]="ganttViewMode === 'day' ? 30 : (ganttViewMode === 'week' ? 40 : (ganttViewMode === 'month' ? 60 : 80))"
+                                    [style.width.px]="ganttViewMode === 'day' ? 30 : (ganttViewMode === 'week' ? 40 : (ganttViewMode === 'month' ? 60 : 80))">
+
+                                    <ng-container *ngIf="ganttViewMode === 'day'">
+                                        {{ d | date:'dd' }}<br>
+                                        <span class="month-label">{{ getMonthLabel(d) }}</span>
+                                    </ng-container>
+
+                                    <ng-container *ngIf="ganttViewMode === 'week'">
+                                        <span class="month-label">Н{{ d | date:'w' }}</span><br>
+                                        {{ d | date:'dd.MM' }}
+                                    </ng-container>
+
+                                    <ng-container *ngIf="ganttViewMode === 'month'">
+                                        <span class="month-label">{{ getMonthLabel(d) }}</span><br>
+                                        {{ d | date:'yyyy' }}
+                                    </ng-container>
+
+                                    <ng-container *ngIf="ganttViewMode === 'quarter'">
+                                        <span class="month-label">Q{{ (d.getMonth() / 3) + 1 }}</span><br>
+                                        {{ d | date:'yyyy' }}
+                                    </ng-container>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Rows -->
+                        <!-- Rows Container -->
+                        <div class="gantt-body-container" style="position: relative;">
+                            <!-- Dependency Lines SVG -->
+                            <svg class="gantt-links-overlay" [attr.height]="ganttTasks.length * 41"
+                                preserveAspectRatio="none" [attr.viewBox]="'0 0 100 ' + (ganttTasks.length * 41)">
+                                <path *ngFor="let line of getTaskConnections()" [attr.d]="line" fill="none"
+                                    stroke="#bbb" stroke-width="2" vector-effect="non-scaling-stroke"></path>
+                            </svg>
+
+                            <div class="gantt-body-row" *ngFor="let task of ganttTasks">
+                                <div class="gantt-col-name" [title]="task.name">
+                                    {{ task.name }}
+                                </div>
+                                <div class="gantt-timeline-row">
+                                    <div class="gantt-grid-cell" *ngFor="let d of ganttDates"
+                                        [class.today-col]="isToday(d)"
+                                        [style.min-width.px]="ganttViewMode === 'day' ? 30 : (ganttViewMode === 'week' ? 40 : (ganttViewMode === 'month' ? 60 : 80))"
+                                        [style.width.px]="ganttViewMode === 'day' ? 30 : (ganttViewMode === 'week' ? 40 : (ganttViewMode === 'month' ? 60 : 80))">
+                                    </div>
+                                    <div class="gantt-bar" [style.left.%]="getTaskLeftPercent(task)"
+                                        [style.width.%]="getTaskWidthPercent(task)"
+                                        [ngClass]="getTaskStatusClass(task.status)"
+                                        [title]="task.name + '\n' + (task.normativeDeadline | date:'dd.MM.yyyy')"
+                                        (click)="openGanttTaskInfo(task)">
+                                        <span class="bar-label">{{ getTaskDuration(task) }} дн.</span>
+                                    </div>
+                                    <div *ngIf="getTaskDeviation(task) as dev"
+                                        [style.left.%]="getTaskLeftPercent(task) + getTaskWidthPercent(task)"
+                                        [style.color]="dev.type === 'early' ? '#10B981' : '#EF4444'"
+                                        style="position: absolute; top: 50%; transform: translateY(-50%); margin-left: 8px; font-size: 10px; font-weight: bold; white-space: nowrap; z-index: 5; pointer-events: none;">
+                                        {{ dev.type === 'early' ? '+' : '-' }}{{ dev.days }}
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div *ngIf="ganttDates.length === 0" class="no-data">Нет данных для графика</div>
+                </div>
+
+                <!-- Active Tasks List -->
+                <div class="info-card tasks-card">
+                    <div class="card-header-flex">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <h3 class="section-title" style="margin:0;">✅ ЗАДАЧИ</h3>
+                            <button class="btn-toggle-gantt" (click)="toggleTasksView()" title="Свернуть/Развернуть">
+                                {{ showAllTasks ? '▲' : '▼' }}
+                            </button>
+                        </div>
+                        <div class="header-actions">
+                            <div class="tasks-count-badge">{{ displayedTasks.length }}</div>
+                        </div>
+                    </div>
+
+                    <div class="tasks-table-wrapper" *ngIf="displayedTasks.length > 0">
+                        <div class="tasks-table-header">
+                            <div class="col-task-name">Задача</div>
+                            <div class="col-responsible">Ответственный</div>
+                            <div class="col-deadline">Плановый срок</div>
+                            <div class="col-deadline">Фактический срок</div>
+                            <div class="col-deviation">Отклонение</div>
+                            <div class="col-status">Статус</div>
+                        </div>
+                        <div class="tasks-table-body">
+                            <div class="task-row" *ngFor="let task of displayedTasks"
+                                [class.row-clickable]="canEditTask(task)">
+                                <div class="col-task-name">
+                                    <div class="task-name-wrapper">
+                                        <span class="task-name-text"
+                                            (click)="canEditTask(task) && openEditTaskModal(task)">
+                                            {{ task.name }}
+                                        </span>
+                                        <button *ngIf="canEditTask(task)" class="btn-edit-icon"
+                                            (click)="openEditTaskModal(task)" title="Редактировать">✎</button>
+                                    </div>
+                                </div>
+                                <div class="col-responsible">
+                                    <div class="responsible-wrapper">
+                                        <span class="resp-icon">👤</span>
+                                        <span>{{ getResponsibleDisplay(task) }}</span>
+                                    </div>
+                                </div>
+                                <div class="col-deadline">
+                                    <div class="deadline-wrapper">
+                                        <span class="deadline-icon">📅</span>
+                                        <span>{{ task.normativeDeadline | date:'dd.MM.yyyy' }}</span>
+                                    </div>
+                                </div>
+                                <div class="col-deadline">
+                                    <div class="deadline-wrapper">
+                                        <span class="deadline-icon" *ngIf="task.actualDate">✅</span>
+                                        <span [class.text-muted]="!task.actualDate">
+                                            {{ task.actualDate ? (task.actualDate | date:'dd.MM.yyyy') : '—' }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="col-deviation">
+                                    <span *ngIf="getTaskDeviation(task)" class="deviation-badge"
+                                        [class.early]="getTaskDeviation(task)?.type === 'early'"
+                                        [class.late]="getTaskDeviation(task)?.type === 'late'">
+                                        <span *ngIf="getTaskDeviation(task)?.type === 'early'">
+                                            ✓ {{ getTaskDeviation(task)?.days }} дн.
+                                        </span>
+                                        <span *ngIf="getTaskDeviation(task)?.type === 'late'">
+                                            ⚠ {{ getTaskDeviation(task)?.days }} дн.
+                                        </span>
+                                    </span>
+                                    <span *ngIf="!getTaskDeviation(task)" class="text-muted">—</span>
+                                </div>
+                                <div class="col-status">
+                                    <span class="status-badge" [ngClass]="getTaskStatusClass(task.status)">
+                                        {{ task.status }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="no-tasks" *ngIf="displayedTasks.length === 0">
+                        <div class="no-tasks-icon">📋</div>
+                        <div class="no-tasks-text">Нет задач для отображения</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<!-- Create Task Modal -->
+<div class="modal-overlay" *ngIf="showCreateTaskModal" (click)="closeCreateTaskModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+        <h2>Новая задача</h2>
+        <div class="form-group">
+            <label>Тип</label>
+            <select [(ngModel)]="newTask.taskType" (change)="onTaskTypeChange()">
+                <option *ngFor="let t of taskTypes" [value]="t">{{ t }}</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Название</label>
+            <input [(ngModel)]="newTask.name">
+        </div>
+        <div class="form-group">
+            <label>Ответственный</label>
+            <input [(ngModel)]="newTask.responsible">
+        </div>
+        <div class="form-group">
+            <label>Срок</label>
+            <input type="date" [(ngModel)]="newTask.normativeDeadline">
+        </div>
+        <div class="modal-actions">
+            <button (click)="closeCreateTaskModal()">Отмена</button>
+            <button class="btn-primary" (click)="createTask()">Создать</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Task Modal -->
+<div class="modal-overlay" *ngIf="showEditTaskModal" (click)="closeEditTaskModal()">
+    <div class="modal-content large-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>{{ selectedTask?.name }}</h2>
+            <button class="btn-close-modal" (click)="closeEditTaskModal()"
+                style="background:none; border:none; font-size:24px; cursor:pointer; color:#999;">×</button>
+        </div>
+
+        <div class="modal-form-grid" *ngIf="selectedTask">
+            <!-- Dependency Box -->
+            <div class="dependency-box">
+                <div class="dep-item">
+                    <span class="dep-label">Предшественник</span>
+                    <span class="dep-value">{{ prevTaskNames }}</span>
+                </div>
+                <div class="dep-item">
+                    <span class="dep-label">Последователь</span>
+                    <span class="dep-value">{{ nextTaskNames }}</span>
+                </div>
+            </div>
+
+            <!-- Main Info (Name removed as it is in header) -->
+            <div class="form-section-title">Основная информация</div>
+
+            <div class="field-group">
+                <label>Ответственный</label>
+                <input type="text" [(ngModel)]="selectedTask.responsible" class="modern-input" readonly>
+            </div>
+
+            <div class="field-group">
+                <label>Статус</label>
+                <select [(ngModel)]="selectedTask.status" class="modern-input modern-select">
+                    <option *ngFor="let s of taskStatuses" [value]="s">{{s}}</option>
+                </select>
+            </div>
+
+            <!-- Timeline Group -->
+            <div class="form-section-title">Сроки выполнения</div>
+
+            <div class="field-group">
+                <label>Плановый срок</label>
+                <input type="date" [ngModel]="selectedTask.normativeDeadline | date:'yyyy-MM-dd'"
+                    (ngModelChange)="selectedTask.normativeDeadline = $event" class="modern-input" readonly>
+            </div>
+
+            <div class="field-group">
+                <label>Фактический срок</label>
+                <input type="date" [ngModel]="selectedTask.actualDate | date:'yyyy-MM-dd'"
+                    (ngModelChange)="selectedTask.actualDate = $event" class="modern-input" readonly>
+                <small class="field-hint">Заполняется автоматически при завершении задачи</small>
+            </div>
+
+            <!-- Deviation (if evident) -->
+            <div class="field-group full-width" *ngIf="getTaskDeviation(selectedTask)">
+                <label>Отклонение от плана</label>
+                <div class="deviation-display" [class.early]="getTaskDeviation(selectedTask)?.type === 'early'"
+                    [class.late]="getTaskDeviation(selectedTask)?.type === 'late'">
+                    <span *ngIf="getTaskDeviation(selectedTask)?.type === 'early'">
+                        ✓ Выполняется раньше на {{ getTaskDeviation(selectedTask)?.days }} дн.
+                    </span>
+                    <span *ngIf="getTaskDeviation(selectedTask)?.type === 'late'">
+                        ⚠ Задержка на {{ getTaskDeviation(selectedTask)?.days }} дн.
+                    </span>
+                </div>
+            </div>
+
+            <!-- Custom Audit Fields -->
+            <ng-container *ngIf="selectedTask.name === 'Подготовка к аудиту'">
+                <div class="form-section-title">Аудит</div>
+                <div class="field-group">
+                    <label>Плановая дата аудита <span class="required">*</span></label>
+                    <input type="date" [ngModel]="selectedTask.plannedAuditDate | date:'yyyy-MM-dd'"
+                        (ngModelChange)="selectedTask.plannedAuditDate = $event" class="modern-input">
+                </div>
+                <div class="field-group">
+                    <label>Ссылка на проект <span class="required">*</span></label>
+                    <input type="text" [(ngModel)]="selectedTask.projectFolderLink" placeholder="https://..."
+                        class="modern-input">
+                </div>
+            </ng-container>
+
+            <!-- Custom Audit Object Fields -->
+            <ng-container *ngIf="selectedTask.name === 'Аудит объекта'">
+                <div class="form-section-title">Результаты аудита</div>
+                <div class="field-group">
+                    <label>Фактическая дата аудита <span class="required">*</span></label>
+                    <input type="date" [ngModel]="selectedTask.actualAuditDate | date:'yyyy-MM-dd'"
+                        (ngModelChange)="selectedTask.actualAuditDate = $event" class="modern-input">
+                </div>
+            </ng-container>
+
+            <!-- Custom Alcohol License Fields -->
+            <ng-container *ngIf="selectedTask.name === 'Алкогольная лицензия'">
+                <div class="form-section-title">Лицензия</div>
+                <div class="field-group">
+                    <label>Возможность получения алкогольной лицензии <span class="required">*</span></label>
+                    <select [(ngModel)]="selectedTask.alcoholLicenseEligibility" class="modern-input modern-select">
+                        <option [ngValue]="undefined" disabled>Выберите значение</option>
+                        <option value="Да">Да</option>
+                        <option value="Нет">Нет</option>
+                    </select>
+                </div>
+            </ng-container>
+
+            <!-- Custom TBO Fields -->
+            <ng-container *ngIf="selectedTask.name === 'Площадка ТБО'">
+                <div class="form-section-title">Площадка ТБО</div>
+                <div class="field-group">
+                    <label>Ссылка на документы для площадки ТБО <span class="required">*</span></label>
+                    <input type="text" [(ngModel)]="selectedTask.tboDocsLink" placeholder="https://..."
+                        class="modern-input">
+                </div>
+                <div class="field-group">
+                    <label>Дата согласования <span class="required">*</span></label>
+                    <input type="date" [ngModel]="selectedTask.tboAgreementDate | date:'yyyy-MM-dd'"
+                        (ngModelChange)="selectedTask.tboAgreementDate = $event" class="modern-input">
+                </div>
+                <div class="field-group">
+                    <label>Дата внесения в Реестр ТБО <span class="required">*</span></label>
+                    <input type="date" [ngModel]="selectedTask.tboRegistryDate | date:'yyyy-MM-dd'"
+                        (ngModelChange)="selectedTask.tboRegistryDate = $event" class="modern-input">
+                </div>
+            </ng-container>
+
+            <!-- Custom Planning Contour Fields -->
+            <ng-container *ngIf="selectedTask.name === 'Контур планировки'">
+                <div class="form-section-title">Контур планировки</div>
+
+                <div class="field-group">
+                    <label>Дата согласования контура планировки <span class="required">*</span></label>
+                    <input type="date" [ngModel]="selectedTask.planningContourAgreementDate | date:'yyyy-MM-dd'"
+                        (ngModelChange)="selectedTask.planningContourAgreementDate = $event" class="modern-input">
+                </div>
+
+                <!-- 1. Object Photos -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Фотографии объекта <span
+                            class="required">*</span></div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Фотографии объекта').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Фотографии объекта')" class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">🖼️</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="photosInput.click()" style="margin-top: 10px;">
+                        <div class="upload-icon">📷</div>
+                        <div class="upload-text">Загрузить фотографии</div>
+                        <div class="upload-subtext">Можно несколько</div>
+                    </div>
+                    <input #photosInput type="file" multiple (change)="onTaskFileSelected($event, 'Фотографии объекта')"
+                        style="display:none">
+                </div>
+
+                <!-- 2. Measurement Plan (DWG Only) -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Обмерный план <span
+                            class="required">*</span></div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Обмерный план').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Обмерный план')" class="attachment-item tech-plan">
+                            <div class="attachment-info">
+                                <span class="file-icon">📐</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="measurePlanInput.click()"
+                        *ngIf="getDocsByType('Обмерный план').length === 0">
+                        <div class="upload-icon">📐</div>
+                        <div class="upload-text">Загрузить Обмерный план</div>
+                        <div class="upload-subtext">Только .dwg</div>
+                    </div>
+                    <input #measurePlanInput type="file" accept=".dwg"
+                        (change)="onTaskFileSelected($event, 'Обмерный план')" style="display:none">
+                </div>
+
+                <!-- 3. Preliminary Contour (DWG Only) -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Предварительный контур планировки <span
+                            class="required">*</span></div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Предварительный контур').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Предварительный контур')"
+                            class="attachment-item tech-plan">
+                            <div class="attachment-info">
+                                <span class="file-icon">🏗️</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="prelimContourInput.click()"
+                        *ngIf="getDocsByType('Предварительный контур').length === 0">
+                        <div class="upload-icon">🏗️</div>
+                        <div class="upload-text">Загрузить Контур</div>
+                        <div class="upload-subtext">Только .dwg</div>
+                    </div>
+                    <input #prelimContourInput type="file" accept=".dwg"
+                        (change)="onTaskFileSelected($event, 'Предварительный контур')" style="display:none">
+                </div>
+            </ng-container>
+
+            <!-- Custom Visualization Fields -->
+            <ng-container *ngIf="selectedTask.name === 'Визуализация'">
+                <div class="form-section-title">Визуализация</div>
+
+                <div class="field-group">
+                    <label>Дата согласования визуализации <span class="required">*</span></label>
+                    <input type="date" [ngModel]="selectedTask.visualizationAgreementDate | date:'yyyy-MM-dd'"
+                        (ngModelChange)="selectedTask.visualizationAgreementDate = $event" class="modern-input">
+                </div>
+
+                <!-- 1. Visualization Concept -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Концепт визуализации <span
+                            class="required">*</span></div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Концепт визуализации').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Концепт визуализации')" class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">🎨</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="conceptInput.click()"
+                        *ngIf="getDocsByType('Концепт визуализации').length === 0">
+                        <div class="upload-icon">🎨</div>
+                        <div class="upload-text">Загрузить Концепт</div>
+                    </div>
+                    <input #conceptInput type="file" (change)="onTaskFileSelected($event, 'Концепт визуализации')"
+                        style="display:none">
+                </div>
+
+                <!-- 2. EGRN Extract -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Выписка ЕГРН <span
+                            class="required">*</span></div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Выписка ЕГРН').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Выписка ЕГРН')" class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">📄</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="egrnInput.click()"
+                        *ngIf="getDocsByType('Выписка ЕГРН').length === 0">
+                        <div class="upload-icon">📄</div>
+                        <div class="upload-text">Загрузить Выписку</div>
+                    </div>
+                    <input #egrnInput type="file" (change)="onTaskFileSelected($event, 'Выписка ЕГРН')"
+                        style="display:none">
+                </div>
+
+                <!-- 3. Store Appearance -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Визуализация внешнего вида <span
+                            class="required">*</span></div>
+
+                    <div class="attachments-list"
+                        *ngIf="getDocsByType('Визуализация внешнего вида магазина').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Визуализация внешнего вида магазина')"
+                            class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">🏬</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="appearanceInput.click()"
+                        *ngIf="getDocsByType('Визуализация внешнего вида магазина').length === 0">
+                        <div class="upload-icon">🏬</div>
+                        <div class="upload-text">Загрузить Визуализацию</div>
+                    </div>
+                    <input #appearanceInput type="file"
+                        (change)="onTaskFileSelected($event, 'Визуализация внешнего вида магазина')"
+                        style="display:none">
+                </div>
+            </ng-container>
+
+            <!-- Custom Logistics Assessment Fields -->
+            <ng-container *ngIf="selectedTask.name === 'Оценка логистики'">
+                <div class="form-section-title">Оценка логистики</div>
+
+                <div class="field-group">
+                    <label>Возможность НБКП <span class="required">*</span></label>
+                    <select [(ngModel)]="selectedTask.logisticsNbkpEligibility" class="modern-input modern-select">
+                        <option [ngValue]="undefined" disabled>Выберите значение</option>
+                        <option value="Да">Да</option>
+                        <option value="Нет">Нет</option>
+                    </select>
+                </div>
+
+                <!-- 1. Access Roads Scheme (Any format) -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Схема подъездных путей <span
+                            class="required">*</span></div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Схема подъездных путей').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Схема подъездных путей')" class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">🗺️</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="accessRouteInput.click()">
+                        <div class="upload-icon">🗺️</div>
+                        <div class="upload-text">Загрузить Схему</div>
+                        <div class="upload-subtext">Любой формат</div>
+                    </div>
+                    <input #accessRouteInput type="file" (change)="onTaskFileSelected($event, 'Схема подъездных путей')"
+                        style="display:none">
+                </div>
+
+                <!-- 2. Logistics Assessment (PDF Only) -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Оценка логистики и подъездных путей
+                        <span class="required">*</span>
+                    </div>
+
+                    <div class="attachments-list"
+                        *ngIf="getDocsByType('Оценка логистики и подъездных путей').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Оценка логистики и подъездных путей')"
+                            class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">📄</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="logisticsAssesInput.click()"
+                        *ngIf="getDocsByType('Оценка логистики и подъездных путей').length === 0">
+                        <div class="upload-icon">📄</div>
+                        <div class="upload-text">Загрузить Оценку</div>
+                        <div class="upload-subtext">Только PDF</div>
+                    </div>
+                    <input #logisticsAssesInput type="file" accept=".pdf"
+                        (change)="onTaskFileSelected($event, 'Оценка логистики и подъездных путей')"
+                        style="display:none">
+                </div>
+
+                <!-- 3. NBKP Assessment (PDF Only) -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Оценка возможности НБКП <span
+                            class="required">*</span></div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Оценка возможности НБКП').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Оценка возможности НБКП')" class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">🚚</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="nbkpInput.click()"
+                        *ngIf="getDocsByType('Оценка возможности НБКП').length === 0">
+                        <div class="upload-icon">🚚</div>
+                        <div class="upload-text">Загрузить Оценку НБКП</div>
+                        <div class="upload-subtext">Только PDF</div>
+                    </div>
+                    <input #nbkpInput type="file" accept=".pdf"
+                        (change)="onTaskFileSelected($event, 'Оценка возможности НБКП')" style="display:none">
+                </div>
+            </ng-container>
+
+            <!-- Custom Layout with Arrangement Fields -->
+            <ng-container *ngIf="selectedTask.name === 'Планировка с расстановкой'">
+                <div class="form-section-title">Планировка с расстановкой</div>
+
+                <div class="field-group">
+                    <label>Дата согласования планировки <span class="required">*</span></label>
+                    <input type="date" [ngModel]="selectedTask.layoutAgreementDate | date:'yyyy-MM-dd'"
+                        (ngModelChange)="selectedTask.layoutAgreementDate = $event" class="modern-input">
+                </div>
+
+                <!-- 1. Layout DWG -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Технологическая планировки с
+                        расстановкой оборудования (DWG) <span class="required">*</span></div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Технологическая планировка (DWG)').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Технологическая планировка (DWG)')"
+                            class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">📐</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="layoutDwgInput.click()"
+                        *ngIf="getDocsByType('Технологическая планировка (DWG)').length === 0">
+                        <div class="upload-icon">📐</div>
+                        <div class="upload-text">Загрузить Планировку</div>
+                        <div class="upload-subtext">Только DWG</div>
+                    </div>
+                    <input #layoutDwgInput type="file" accept=".dwg"
+                        (change)="onTaskFileSelected($event, 'Технологическая планировка (DWG)')" style="display:none">
+                </div>
+
+                <!-- 2. Layout PDF -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Технологическая планировки с
+                        расстановкой оборудования (PDF) <span class="required">*</span></div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Технологическая планировка (PDF)').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Технологическая планировка (PDF)')"
+                            class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">📄</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="layoutPdfInput.click()"
+                        *ngIf="getDocsByType('Технологическая планировка (PDF)').length === 0">
+                        <div class="upload-icon">📄</div>
+                        <div class="upload-text">Загрузить Планировку</div>
+                        <div class="upload-subtext">Только PDF</div>
+                    </div>
+                    <input #layoutPdfInput type="file" accept=".pdf"
+                        (change)="onTaskFileSelected($event, 'Технологическая планировка (PDF)')" style="display:none">
+                </div>
+            </ng-container>
+
+            <!-- Custom Equipment Budget Fields -->
+            <ng-container *ngIf="selectedTask.name === 'Расчет бюджета оборудования'">
+                <div class="form-section-title">Бюджет оборудования</div>
+
+                <div class="field-group">
+                    <label>Сумма затрат на оборудование. руб. без НДС <span class="required">*</span></label>
+                    <input type="number" [(ngModel)]="selectedTask.equipmentCostNoVat" class="modern-input"
+                        placeholder="0.00">
+                </div>
+
+                <!-- 1. Equipment Budget XLS -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Расчет затрат на оборудование (XLS)
+                        <span class="required">*</span>
+                    </div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Расчет затрат на оборудование').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Расчет затрат на оборудование')" class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">📊</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="equipBudgetInput.click()"
+                        *ngIf="getDocsByType('Расчет затрат на оборудование').length === 0">
+                        <div class="upload-icon">📊</div>
+                        <div class="upload-text">Загрузить Расчет</div>
+                        <div class="upload-subtext">Только XLS/XLSX</div>
+                    </div>
+                    <input #equipBudgetInput type="file" accept=".xls,.xlsx"
+                        (change)="onTaskFileSelected($event, 'Расчет затрат на оборудование')" style="display:none">
+                </div>
+            </ng-container>
+
+            <!-- Custom Security Budget Fields -->
+            <ng-container *ngIf="selectedTask.name === 'Расчет бюджета СБ'">
+                <div class="form-section-title">Бюджет СБ</div>
+
+                <div class="field-group">
+                    <label>Сумма бюджета СБ. руб. без НДС <span class="required">*</span></label>
+                    <input type="number" [(ngModel)]="selectedTask.securityBudgetNoVat" class="modern-input"
+                        placeholder="0.00">
+                </div>
+
+                <!-- 1. Security Questionnaire -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Анкета СБ <span
+                            class="required">*</span></div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Анкета СБ').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Анкета СБ')" class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">📝</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="sbQuestInput.click()"
+                        *ngIf="getDocsByType('Анкета СБ').length === 0">
+                        <div class="upload-icon">📝</div>
+                        <div class="upload-text">Загрузить Анкету</div>
+                    </div>
+                    <input #sbQuestInput type="file" (change)="onTaskFileSelected($event, 'Анкета СБ')"
+                        style="display:none">
+                </div>
+
+                <!-- 2. Security Budget Calculation XLS -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Расчет затрат на оборудование СБ (XLS)
+                        <span class="required">*</span>
+                    </div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Расчет затрат на оборудование СБ').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Расчет затрат на оборудование СБ')"
+                            class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">📊</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="sbBudgetInput.click()"
+                        *ngIf="getDocsByType('Расчет затрат на оборудование СБ').length === 0">
+                        <div class="upload-icon">📊</div>
+                        <div class="upload-text">Загрузить Расчет</div>
+                        <div class="upload-subtext">Только XLS/XLSX</div>
+                    </div>
+                    <input #sbBudgetInput type="file" accept=".xls,.xlsx"
+                        (change)="onTaskFileSelected($event, 'Расчет затрат на оборудование СБ')" style="display:none">
+                </div>
+            </ng-container>
+
+            <!-- Custom RSR Budget Fields -->
+            <ng-container *ngIf="selectedTask.name === 'ТЗ и расчет бюджета РСР'">
+                <div class="form-section-title">Бюджет РСР</div>
+
+                <div class="field-group">
+                    <label>Сумма бюджета РСР. руб. без НДС <span class="required">*</span></label>
+                    <input type="number" [(ngModel)]="selectedTask.rsrBudgetNoVat" class="modern-input"
+                        placeholder="0.00">
+                </div>
+
+                <!-- 1. Distribution List -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Распределительная ведомость <span
+                            class="required">*</span></div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Распределительная ведомость').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Распределительная ведомость')" class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">📋</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="distListInput.click()"
+                        *ngIf="getDocsByType('Распределительная ведомость').length === 0">
+                        <div class="upload-icon">📋</div>
+                        <div class="upload-text">Загрузить Ведомость</div>
+                    </div>
+                    <input #distListInput type="file"
+                        (change)="onTaskFileSelected($event, 'Распределительная ведомость')" style="display:none">
+                </div>
+
+                <!-- 2. Technical Assignment (Optional) -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Техническое задание</div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Техническое задание').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Техническое задание')" class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">📝</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="techAssInput.click()">
+                        <div class="upload-icon">📝</div>
+                        <div class="upload-text">Загрузить ТЗ</div>
+                        <div class="upload-subtext">Не обязательно</div>
+                    </div>
+                    <input #techAssInput type="file" (change)="onTaskFileSelected($event, 'Техническое задание')"
+                        style="display:none">
+                </div>
+
+                <!-- 3. RSR Budget Calculation (XLS) -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Расчет бюджета РСР (XLS) <span
+                            class="required">*</span></div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Расчет бюджета РСР').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Расчет бюджета РСР')" class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">📊</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="rsrBudgetInput.click()"
+                        *ngIf="getDocsByType('Расчет бюджета РСР').length === 0">
+                        <div class="upload-icon">📊</div>
+                        <div class="upload-text">Загрузить Расчет</div>
+                        <div class="upload-subtext">Только XLS/XLSX</div>
+                    </div>
+                    <input #rsrBudgetInput type="file" accept=".xls,.xlsx"
+                        (change)="onTaskFileSelected($event, 'Расчет бюджета РСР')" style="display:none">
+                </div>
+            </ng-container>
+
+            <!-- Custom PIS Budget Fields -->
+            <ng-container *ngIf="selectedTask.name === 'Расчет бюджета ПиС'">
+                <div class="form-section-title">Бюджет ПИС</div>
+
+                <div class="field-group">
+                    <label>Сумма бюджета ПИС. руб. без НДС <span class="required">*</span></label>
+                    <input type="number" [(ngModel)]="selectedTask.pisBudgetNoVat" class="modern-input"
+                        placeholder="0.00">
+                </div>
+
+                <!-- 1. PIS Budget Calculation (XLS, Optional) -->
+                <div class="full-width" style="margin-top: 16px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Расчет бюджета ПИС (XLS)</div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Расчет бюджета ПИС').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Расчет бюджета ПИС')" class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">📊</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="pisBudgetInput.click()"
+                        *ngIf="getDocsByType('Расчет бюджета ПИС').length === 0">
+                        <div class="upload-icon">📊</div>
+                        <div class="upload-text">Загрузить Расчет</div>
+                        <div class="upload-subtext">Не обязательно, только XLS/XLSX</div>
+                    </div>
+                    <input #pisBudgetInput type="file" accept=".xls,.xlsx"
+                        (change)="onTaskFileSelected($event, 'Расчет бюджета ПИС')" style="display:none">
+                </div>
+            </ng-container>
+
+            <!-- Custom General Project Budget Fields -->
+            <ng-container *ngIf="selectedTask.name === 'Общий бюджет проекта'">
+                <div class="form-section-title">Общий бюджет</div>
+
+                <div class="field-group">
+                    <label>Сумма общего бюджета. руб. без НДС <span class="required">*</span></label>
+                    <input type="number" [(ngModel)]="selectedTask.totalBudgetNoVat" class="modern-input"
+                        placeholder="0.00">
+                </div>
+            </ng-container>
+
+            <!-- Activity Log / Metadata (Readonly) -->
+            <div class="form-section-title">Хронология</div>
+
+            <div class="field-group" *ngIf="selectedTask.createdAt">
+                <label>Назначено</label>
+                <div class="modern-input" style="background:#f8fafc; border:none; color:#64748b;">
+                    {{ selectedTask.createdAt | date:'dd.MM.yyyy HH:mm' }}
+                </div>
+            </div>
+
+            <div class="field-group" *ngIf="selectedTask.startedAt">
+                <label>Взято в работу</label>
+                <div class="modern-input" style="background:#f8fafc; border:none; color:#64748b;">
+                    {{ selectedTask.startedAt | date:'dd.MM.yyyy HH:mm' }}
+                </div>
+            </div>
+
+            <div class="field-group" *ngIf="selectedTask.completedAt">
+                <label>Завершено</label>
+                <div class="modern-input" style="background:#f8fafc; border:none; color:#64748b;">
+                    {{ selectedTask.completedAt | date:'dd.MM.yyyy HH:mm' }}
+                </div>
+            </div>
+
+            <!-- Attachments -->
+            <div class="form-section-title">Вложения</div>
+
+            <!-- Special handling for 'Подготовка к аудиту' -->
+            <ng-container *ngIf="selectedTask.name === 'Подготовка к аудиту'; else defaultAttachments">
+
+                <!-- 1. Technical Plan -->
+                <div class="full-width" style="margin-bottom: 20px;">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Технический план <span
+                            class="required">*</span></div>
+
+                    <div class="upload-placeholder" (click)="techPlanInput.click()"
+                        *ngIf="getDocsByType('Технический план').length === 0">
+                        <div class="upload-icon">📂</div>
+                        <div class="upload-text">Загрузить Технический план</div>
+                        <div class="upload-subtext">Файл .pdf, .dwg</div>
+                    </div>
+
+                    <div class="attachments-list" *ngIf="getDocsByType('Технический план').length > 0">
+                        <div *ngFor="let doc of getDocsByType('Технический план')" class="attachment-item tech-plan">
+                            <div class="attachment-info">
+                                <span class="file-icon">📑</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)" title="Удалить">×</button>
+                        </div>
+                    </div>
+
+                    <input #techPlanInput type="file" (change)="onTaskFileSelected($event, 'Технический план')"
+                        style="display:none">
+                </div>
+
+                <!-- 2. Additional Docs -->
+                <div class="full-width">
+                    <div class="form-section-title" style="margin-bottom: 10px;">Дополнительные документы</div>
+
+                    <div class="attachments-list" *ngIf="getDocsExcludeType('Технический план').length > 0">
+                        <div *ngFor="let doc of getDocsExcludeType('Технический план')" class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">📎</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="addDocInput.click()"
+                        style="margin-top: 10px; border-style: dashed; padding: 12px; min-height: 0;">
+                        <span class="upload-text" style="color:#64748b; font-size:12px;">+ Добавить документ</span>
+                    </div>
+
+                    <input #addDocInput type="file" (change)="onTaskFileSelected($event, 'Вложение к задаче')"
+                        style="display:none">
+                </div>
+            </ng-container>
+
+            <!-- Default Attachments -->
+            <ng-template #defaultAttachments>
+                <div class="full-width">
+                    <div class="attachments-list" *ngIf="taskDocuments.length > 0">
+                        <div *ngFor="let doc of taskDocuments" class="attachment-item">
+                            <div class="attachment-info">
+                                <span class="file-icon">📎</span>
+                                <span class="file-name" (click)="downloadDoc(doc)">{{ doc.name }}</span>
+                            </div>
+                            <button class="btn-delete-doc" (click)="deleteDoc(doc)">×</button>
+                        </div>
+                    </div>
+
+                    <div class="upload-placeholder" (click)="defaultInput.click()" style="margin-top: 10px;">
+                        <div class="upload-icon">☁️</div>
+                        <div class="upload-text">Загрузить файлы</div>
+                        <div class="upload-subtext">Нажмите для выбора</div>
+                    </div>
+                    <input #defaultInput type="file" (change)="onTaskFileSelected($event)" style="display:none">
+                </div>
+            </ng-template>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" (click)="closeEditTaskModal()">Отмена</button>
+            <button *ngIf="selectedTask && selectedTask.status === 'Назначена'" class="btn-action-start"
+                (click)="selectedTask && startTask(selectedTask); closeEditTaskModal()">
+                ▶ Взять в работу
+            </button>
+            <button *ngIf="selectedTask && selectedTask.status === 'В работе'" class="btn-action-complete"
+                (click)="selectedTask && completeTask(selectedTask)">
+                ✓ Завершить
+            </button>
+            <button class="btn-primary" (click)="saveTaskChanges()">Сохранить</button>
+        </div>
+    </div>
+</div>
+```
+<!-- Gantt Task Info Modal -->
+<div class="modal-overlay" *ngIf="showGanttTaskInfoModal" (click)="closeGanttTaskInfo()">
+    <div class="modal-content gantt-task-modal" (click)="$event.stopPropagation()"
+        style="max-width: 600px; width: 100%; padding: 24px; border-radius: 16px; background: white; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);">
+        <div class="modal-header-compact"
+            style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
+            <h2 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0; line-height: 1.4;">{{
+                ganttSelectedTask?.name }}</h2>
+            <button class="btn-close-modal" (click)="closeGanttTaskInfo()"
+                style="background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer; line-height: 1; padding: 0;">×</button>
+        </div>
+
+        <div class="task-info-grid" *ngIf="ganttSelectedTask"
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+
+            <!-- Cards -->
+            <div class="info-card-item"
+                style="background: #f8fafc; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 16px; border: 1px solid #e2e8f0;">
+                <div class="icon-wrapper"
+                    style="width: 44px; height: 44px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    📋
+                </div>
+                <div>
+                    <div
+                        style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
+                        Тип задачи</div>
+                    <div style="font-size: 14px; font-weight: 600; color: #0f172a; margin-top: 2px;">UserTask</div>
+                </div>
+            </div>
+
+            <div class="info-card-item"
+                style="background: #f8fafc; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 16px; border: 1px solid #e2e8f0;">
+                <div class="icon-wrapper"
+                    style="width: 44px; height: 44px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    👤
+                </div>
+                <div>
+                    <div
+                        style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
+                        Ответственный</div>
+                    <div style="font-size: 14px; font-weight: 600; color: #0f172a; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;"
+                        title="{{ getResponsibleDisplay(ganttSelectedTask) }}">{{
+                        getResponsibleDisplay(ganttSelectedTask) }}</div>
+                </div>
+            </div>
+
+            <div class="info-card-item"
+                style="background: #f8fafc; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 16px; border: 1px solid #e2e8f0;">
+                <div class="icon-wrapper"
+                    style="width: 44px; height: 44px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    🗓️
+                </div>
+                <div>
+                    <div
+                        style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
+                        Плановый срок</div>
+                    <div style="font-size: 14px; font-weight: 600; color: #0f172a; margin-top: 2px;">{{
+                        ganttSelectedTask.normativeDeadline | date:'dd.MM.yyyy' }}</div>
+                </div>
+            </div>
+
+            <div class="info-card-item"
+                style="background: #f8fafc; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 16px; border: 1px solid #e2e8f0;">
+                <div class="icon-wrapper"
+                    style="width: 44px; height: 44px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    🚀
+                </div>
+                <div>
+                    <div
+                        style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
+                        Дата начала</div>
+                    <div style="font-size: 14px; font-weight: 600; color: #0f172a; margin-top: 2px;">
+                        {{ (ganttSelectedTask.startedAt || ganttSelectedTask.createdAt) | date:'dd.MM.yyyy' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-actions-compact" style="display: flex; justify-content: flex-end; gap: 12px;">
+            <button class="btn-primary"
+                *ngIf="ganttSelectedTask && ganttSelectedTask.isActive && canEditTask(ganttSelectedTask)"
+                (click)="ganttSelectedTask && openEditTaskModal(ganttSelectedTask); closeGanttTaskInfo()"
+                style="border-radius: 8px; padding: 10px 20px; font-size: 14px; background: #3b82f6; color: white; border: none; cursor: pointer;">
+                Редактировать
+            </button>
+            <button class="btn-cancel" (click)="closeGanttTaskInfo()"
+                style="background: #f1f5f9; color: #475569; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600; font-size: 14px; cursor: pointer;">Закрыть</button>
+        </div>
+    </div>
+</div>

@@ -18,6 +18,9 @@ export interface Project {
     createdAt?: string;
     updatedAt?: string;
     store?: Store;
+    // BPMN fields
+    currentStage?: string;
+    templateId?: number;
 }
 
 export const PROJECT_TYPES = ['Открытие', 'Реконструкция'];

@@ -1,75 +1,148 @@
 <div class="tasks-page">
-    <!-- Header -->
+    <!-- Header with Filters -->
     <div class="page-header">
         <div class="header-left">
             <h1 class="page-title">Задачи</h1>
             <div class="title-underline"></div>
             <p class="page-subtitle">Все задачи по всем проектам</p>
         </div>
-    </div>
 
-    <!-- Filters -->
-    <div class="filters-section">
-        <div class="search-box">
-            <span class="search-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        <!-- Filters Bar -->
+        <div class="filters-bar">
+            <div class="search-box">
+                <span class="search-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </span>
+                <input type="text" placeholder="Поиск (название, ID проекта)" [(ngModel)]="searchQuery"
+                    (input)="filterTasks()">
+            </div>
+
+            <select class="filter-select" [(ngModel)]="typeFilter" (change)="filterTasks()">
+                <option value="">Все типы</option>
+                <option *ngFor="let type of uniqueTaskTypes" [value]="type">{{ type }}</option>
+            </select>
+
+            <select class="filter-select" [(ngModel)]="statusFilter" (change)="filterTasks()">
+                <option value="">Все статусы</option>
+                <option *ngFor="let status of taskStatuses" [value]="status">{{ status }}</option>
+            </select>
+
+            <select class="filter-select" [(ngModel)]="responsibleFilter" (change)="filterTasks()">
+                <option value="">Все исполнители</option>
+                <option *ngFor="let resp of uniqueResponsibles" [value]="resp">{{ resp }}</option>
+            </select>
+
+            <button class="reset-btn"
+                (click)="searchQuery=''; typeFilter=''; statusFilter=''; responsibleFilter=''; showOnlyOverdue=false; showOnlyExpiringSoon=false; filterTasks()"
+                title="Сбросить фильтры"
+                *ngIf="searchQuery || typeFilter || statusFilter || responsibleFilter || showOnlyOverdue || showOnlyExpiringSoon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12" />
+                    <path d="M3 3v9h9" />
                 </svg>
-            </span>
-            <input type="text" placeholder="Поиск задачи..." [(ngModel)]="searchQuery" (input)="filterTasks()">
+            </button>
         </div>
-        <select class="filter-select" [(ngModel)]="statusFilter" (change)="filterTasks()">
-            <option value="">Все статусы</option>
-            <option *ngFor="let status of taskStatuses" [value]="status">{{ status }}</option>
-        </select>
-    </div>
 
-    <!-- Loading State -->
-    <div class="loading-state" *ngIf="loading">
-        <p>Загрузка задач...</p>
-    </div>
+        <!-- Loading State -->
+        <div class="loading-state" *ngIf="loading">
+            <p>Загрузка задач...</p>
+        </div>
 
-    <!-- Table -->
-    <div class="tasks-table-container" *ngIf="!loading && filteredTasks.length > 0">
-        <table class="tasks-table">
-            <thead>
-                <tr>
-                    <th>Название</th>
-                    <th>Проект</th>
-                    <th>Тип</th>
-                    <th>Статус</th>
-                    <th>Ответственный</th>
-                    <th>Срок</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr *ngFor="let task of filteredTasks">
-                    <td class="task-name">{{ task.name }}</td>
-                    <td><span class="project-id-badge">#{{ task.projectId }}</span></td>
-                    <td>{{ task.taskType }}</td>
-                    <td>
-                        <span class="status-badge" [ngClass]="getStatusClass(task.status)">
-                            {{ task.status }}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="responsible-cell">
-                            <div class="resp-avatar">{{ getInitials(task.responsible) }}</div>
-                            <span>{{ task.responsible }}</span>
-                        </div>
-                    </td>
-                    <td [ngClass]="getDeadlineClass(task.normativeDeadline)">
-                        {{ task.normativeDeadline | date:'dd.MM.yyyy' }}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+        <!-- Table -->
+        <div class="tasks-table-container" *ngIf="!loading && filteredTasks.length > 0">
+            <table class="tasks-table compact-table">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;" (click)="sortTasks('name')" class="sortable-header">
+                            Название
+                            <span *ngIf="sortColumn === 'name'" class="sort-arrow">{{ sortDirection === 'asc' ? '↑' :
+                                '↓' }}</span>
+                        </th>
+                        <th style="width: 5%;" (click)="sortTasks('projectId')" class="sortable-header">
+                            Проект
+                            <span *ngIf="sortColumn === 'projectId'" class="sort-arrow">{{ sortDirection === 'asc' ? '↑'
+                                : '↓' }}</span>
+                        </th>
+                        <th style="width: 12%;" (click)="sortTasks('taskType')" class="sortable-header">
+                            Тип
+                            <span *ngIf="sortColumn === 'taskType'" class="sort-arrow">{{ sortDirection === 'asc' ? '↑'
+                                : '↓' }}</span>
+                        </th>
+                        <th style="width: 10%;" (click)="sortTasks('status')" class="sortable-header">
+                            Статус
+                            <span *ngIf="sortColumn === 'status'" class="sort-arrow">{{ sortDirection === 'asc' ? '↑' :
+                                '↓' }}</span>
+                        </th>
+                        <th style="width: 15%;" (click)="sortTasks('responsible')" class="sortable-header">
+                            Ответственный
+                            <span *ngIf="sortColumn === 'responsible'" class="sort-arrow">{{ sortDirection === 'asc' ?
+                                '↑' : '↓' }}</span>
+                        </th>
+                        <th style="width: 8%;" (click)="sortTasks('normativeDeadline')" class="sortable-header">
+                            План
+                            <span *ngIf="sortColumn === 'normativeDeadline'" class="sort-arrow">{{ sortDirection ===
+                                'asc' ? '↑' : '↓' }}</span>
+                        </th>
+                        <th style="width: 15%;" (click)="sortTasks('actualDate')" class="sortable-header">
+                            Факт / Откл.
+                            <span *ngIf="sortColumn === 'actualDate'" class="sort-arrow">{{ sortDirection === 'asc' ?
+                                '↑' : '↓' }}</span>
+                        </th>
+                        <th style="width: 10%;" (click)="sortTasks('createdAt')" class="sortable-header">
+                            Создана
+                            <span *ngIf="sortColumn === 'createdAt'" class="sort-arrow">{{ sortDirection === 'asc' ? '↑'
+                                : '↓' }}</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let task of filteredTasks" (click)="openEditModal(task)" class="clickable-row">
+                        <td class="task-name-cell">
+                            <span class="task-name-text" title="{{ task.name }}">{{ task.name }}</span>
+                        </td>
+                        <td><span class="project-id-badge">#{{ task.projectId }}</span></td>
+                        <td class="text-cell">{{ task.taskType }}</td>
+                        <td>
+                            <span class="status-badge" [ngClass]="getStatusClass(task.status)">
+                                {{ task.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="responsible-cell">
+                                <div class="resp-avatar-sm">{{ getInitials(task.responsible) }}</div>
+                                <span class="resp-name">{{ getResponsibleDisplay(task) }}</span>
+                            </div>
+                        </td>
+                        <td [ngClass]="getDeadlineClass(task.normativeDeadline)">
+                            {{ task.normativeDeadline | date:'dd.MM.yyyy' }}
+                        </td>
+                        <td>
+                            <div *ngIf="task.actualDate">
+                                {{ task.actualDate | date:'dd.MM.yyyy' }}
+                                <span *ngIf="getTaskDeviation(task) as dev"
+                                    [style.color]="dev.type === 'early' ? 'green' : 'red'"
+                                    style="font-size: 11px; margin-left: 4px; font-weight: 600;">
+                                    ({{ dev.type === 'early' ? '-' : '+' }}{{ dev.days }}д)
+                                </span>
+                            </div>
+                            <span *ngIf="!task.actualDate" style="color: #ccc;">—</span>
+                        </td>
+                        <td style="color: #94a3b8;">
+                            {{ task.createdAt | date:'dd.MM.yyyy' }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-    <!-- Empty State -->
-    <div class="empty-state" *ngIf="!loading && filteredTasks.length === 0">
-        <p>Задачи не найдены</p>
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="!loading && filteredTasks.length === 0">
+            <p>Задачи не найдены</p>
+        </div>
     </div>
 </div>

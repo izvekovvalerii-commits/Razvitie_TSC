@@ -1,14 +1,15 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ProjectsService } from '../../services/projects';
 import { StoresService } from '../../services/stores';
 import { TasksService } from '../../services/tasks';
+import { AuthService } from '../../services/auth.service';
 import { Project, PROJECT_TYPES, PROJECT_STATUSES, REGIONS, CFO_LIST } from '../../models/project.model';
+import { User, MOCK_USERS, UserRole } from '../../models/user.model';
 import { Store } from '../../models/store.model';
-import { ProjectTask, TASK_TYPES, TASK_STATUSES, TASK_RESPONSIBLE_MAP, TASK_DEADLINE_DAYS } from '../../models/task.model';
-import { DocumentsService } from '../../services/documents';
-import { ProjectDocument, DOCUMENT_TYPES, DOCUMENT_STATUSES } from '../../models/document.model';
+import { WorkflowService } from '../../services/workflow.service';
 
 @Component({
   selector: 'app-projects',
@@ -21,19 +22,20 @@ export class ProjectsComponent implements OnInit {
   stores: Store[] = [];
   loading = true;
   showCreateModal = false;
-  showProjectCard = false;
-  showCreateTaskModal = false;
-  selectedProject: Project | null = null;
-  searchQuery: string = '';
-  projectTasks: ProjectTask[] = [];
+  currentUser: User | null = null;
 
-  // Documents
-  activeTab: 'info' | 'tasks' | 'docs' = 'info';
-  documents: ProjectDocument[] = [];
-  docTypes = DOCUMENT_TYPES;
-  isUploading = false;
-  selectedFile: File | null = null;
-  selectedDocType = DOCUMENT_TYPES[0];
+  searchQuery: string = '';
+  viewMode: 'grid' | 'table' = 'grid';
+
+  get filteredProjects(): Project[] {
+    if (!this.searchQuery) return this.projects;
+    const q = this.searchQuery.toLowerCase();
+    return this.projects.filter(p =>
+      (p.gisCode && p.gisCode.toLowerCase().includes(q)) ||
+      (p.address && p.address.toLowerCase().includes(q)) ||
+      (p.projectType && p.projectType.toLowerCase().includes(q))
+    );
+  }
 
   // Create form
   newProject: Partial<Project> = {
@@ -46,28 +48,26 @@ export class ProjectsComponent implements OnInit {
   };
   selectedStoreId: number | null = null;
 
-  // Task form
-  newTask: Partial<ProjectTask> = {
-    taskType: '',
-    status: 'Назначена'
-  };
-
   projectTypes = PROJECT_TYPES;
   projectStatuses = PROJECT_STATUSES;
   regions = REGIONS;
   cfoList = CFO_LIST;
-  taskTypes = TASK_TYPES;
-  taskStatuses = TASK_STATUSES;
+  managers = MOCK_USERS.filter(u => u.role === UserRole.MP);
 
   constructor(
+    private router: Router,
     private projectsService: ProjectsService,
     private storesService: StoresService,
     private tasksService: TasksService,
-    private docsService: DocumentsService,
+    private workflowService: WorkflowService,
+    private authService: AuthService,
     private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
+    this.authService.currentUser.subscribe(user => {
+      this.currentUser = user;
+    });
     this.loadProjects();
     this.loadStores();
   }
@@ -77,7 +77,7 @@ export class ProjectsComponent implements OnInit {
       next: (data) => {
         this.projects = data;
         this.loading = false;
-        this.cdr.detectChanges(); // Force UI update
+        this.cdr.detectChanges();
       },
       error: (err) => console.error('Error loading projects:', err)
     });
@@ -134,10 +134,38 @@ export class ProjectsComponent implements OnInit {
     };
 
     this.projectsService.createProject(project).subscribe({
-      next: () => {
-        this.loadProjects();
-        this.closeCreateModal();
-        this.resetForm();
+      next: (createdProject) => {
+        console.log('Project created:', createdProject);
+        // Создаем ВСЕ начальные задачи из workflow с автоназначением
+        if (createdProject && createdProject.id) {
+          const projectName = `${createdProject.gisCode} - ${createdProject.address}`;
+
+          // Получаем начальные задачи из workflow (те, у которых нет зависимостей)
+          const initialTasks = this.workflowService.getInitialTasks(createdProject.id);
+          console.log('Creating initial workflow tasks:', initialTasks.length);
+
+          // Создаем каждую задачу с автоназначением
+          const createTaskPromises = initialTasks.map(task =>
+            this.tasksService.createTask(task, projectName).toPromise()
+          );
+
+          Promise.all(createTaskPromises).then(tasks => {
+            console.log('All initial tasks created:', tasks);
+            this.loadProjects();
+            this.closeCreateModal();
+            this.resetForm();
+          }).catch(err => {
+            console.error('Failed to create tasks', err);
+            this.loadProjects();
+            this.closeCreateModal();
+            this.resetForm();
+          });
+        } else {
+          console.warn('No project ID, skipping task creation');
+          this.loadProjects();
+          this.closeCreateModal();
+          this.resetForm();
+        }
       },
       error: (err) => console.error('Error creating project:', err)
     });
@@ -147,7 +175,7 @@ export class ProjectsComponent implements OnInit {
     this.newProject = {
       projectType: '',
       status: 'Создан',
-      mp: 'Менеджер проекта',
+      mp: '', // Allow selection
       nor: 'Начальник отдела развития',
       stMRiZ: 'Старший менеджер',
       rnr: 'Руководитель направления развития'
@@ -157,251 +185,11 @@ export class ProjectsComponent implements OnInit {
 
   viewProject(project: Project) {
     if (project.id) {
-      this.projectsService.getProject(project.id).subscribe({
-        next: (fullProject) => {
-          this.selectedProject = fullProject;
-          this.showProjectCard = true;
-          this.activeTab = 'info';
-          this.loadProjectTasks();
-          this.loadDocuments();
-          this.cdr.detectChanges();
-        },
-        error: (err) => {
-          console.error('Error loading project details:', err);
-          this.selectedProject = project;
-          this.showProjectCard = true;
-          this.loadProjectTasks();
-          this.cdr.detectChanges();
-        }
-      });
-    } else {
-      this.selectedProject = project;
-      this.showProjectCard = true;
+      this.router.navigate(['/projects', project.id]);
     }
   }
 
-  closeProjectCard() {
-    this.showProjectCard = false;
-    this.selectedProject = null;
-  }
-
-  updateStatus(project: Project, newStatus: string) {
-    if (project.id) {
-      this.projectsService.updateStatus(project.id, newStatus).subscribe({
-        next: () => this.loadProjects(),
-        error: (err) => console.error('Error updating status:', err)
-      });
-    }
-  }
-
-  // Task methods
-  openCreateTaskModal() {
-    this.showCreateTaskModal = true;
-    this.resetTaskForm();
-  }
-
-  closeCreateTaskModal() {
-    this.showCreateTaskModal = false;
-    this.resetTaskForm();
-  }
-
-  onTaskTypeChange() {
-    if (!this.newTask.taskType) return;
-    this.newTask.responsible = TASK_RESPONSIBLE_MAP[this.newTask.taskType] || '';
-    this.newTask.name = `${this.newTask.taskType} - ${this.selectedProject?.store?.name || 'Проект'}`;
-    const days = TASK_DEADLINE_DAYS[this.newTask.taskType] || 14;
-    const deadline = new Date();
-    deadline.setDate(deadline.getDate() + days);
-    this.newTask.normativeDeadline = deadline.toISOString().split('T')[0];
-  }
-
-  createTask() {
-    if (!this.selectedProject?.id) {
-      alert('Ошибка: Проект не выбран');
-      return;
-    }
-
-    if (!this.newTask.taskType || !this.newTask.name || !this.newTask.responsible || !this.newTask.normativeDeadline) {
-      alert('Пожалуйста, заполните все обязательные поля');
-      return;
-    }
-
-    const task: ProjectTask = {
-      projectId: this.selectedProject.id,
-      name: this.newTask.name,
-      taskType: this.newTask.taskType,
-      responsible: this.newTask.responsible,
-      normativeDeadline: new Date(this.newTask.normativeDeadline).toISOString(),
-      status: this.newTask.status || 'Назначена'
-    };
-
-    console.log('Sending task:', task);
-
-    this.tasksService.createTask(task).subscribe({
-      next: (created) => {
-        console.log('Task created:', created);
-        this.loadProjectTasks();
-        this.closeCreateTaskModal();
-      },
-      error: (err) => {
-        console.error('SERVER ERROR:', err);
-        alert(`Ошибка при создании задачи: ${err.status} ${err.statusText}`);
-      }
-    });
-  }
-
-  loadProjectTasks() {
-    if (this.selectedProject?.id) {
-      this.tasksService.getProjectTasks(this.selectedProject.id).subscribe({
-        next: (tasks) => {
-          this.projectTasks = tasks;
-          this.cdr.detectChanges();
-        },
-        error: (err) => console.error('Error loading tasks:', err)
-      });
-    }
-  }
-
-  resetTaskForm() {
-    this.newTask = {
-      taskType: '',
-      status: 'Назначена'
-    };
-  }
-
-  getTaskStatusClass(status: string): string {
-    const map: { [key: string]: string } = {
-      'Назначена': 'task-assigned',
-      'В работе': 'task-in-progress',
-      'Завершена': 'task-completed',
-      'Срыва сроков': 'task-overdue'
-    };
-    return map[status] || '';
-  }
-
-  // Gantt Chart logic
-  showGanttModal = false;
-  ganttDates: Date[] = [];
-
-  openGanttModal() {
-    if (!this.projectTasks.length) {
-      alert('В проекте нет задач для отображения графика');
-      return;
-    }
-    this.calculateGanttTimeline();
-    this.showGanttModal = true;
-  }
-
-  closeGanttModal() {
-    this.showGanttModal = false;
-  }
-
-  calculateGanttTimeline() {
-    if (!this.projectTasks.length) return;
-
-    const dates = this.projectTasks.flatMap(t => [
-      t.createdAt ? new Date(t.createdAt) : new Date(),
-      new Date(t.normativeDeadline)
-    ]);
-
-    const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
-    const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
-
-    minDate.setDate(minDate.getDate() - 2);
-    maxDate.setDate(maxDate.getDate() + 2);
-
-    this.ganttDates = [];
-    const curr = new Date(minDate);
-    while (curr <= maxDate) {
-      this.ganttDates.push(new Date(curr));
-      curr.setDate(curr.getDate() + 1);
-    }
-  }
-
-  getTaskStartOffset(task: ProjectTask): number {
-    if (!this.ganttDates.length) return 0;
-    const startDate = task.createdAt ? new Date(task.createdAt) : new Date();
-    const minDate = this.ganttDates[0];
-    const diffTime = Math.abs(startDate.getTime() - minDate.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }
-
-  getTaskDuration(task: ProjectTask): number {
-    const startDate = task.createdAt ? new Date(task.createdAt) : new Date();
-    const endDate = new Date(task.normativeDeadline);
-    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-    return Math.max(Math.ceil(diffTime / (1000 * 60 * 60 * 24)), 1);
-  }
-
-  // --- Documents Logic ---
-
-  loadDocuments() {
-    if (!this.selectedProject?.id) return;
-    this.docsService.getByProject(this.selectedProject.id).subscribe({
-      next: (docs) => {
-        this.documents = docs;
-        this.cdr.detectChanges();
-      },
-      error: (err) => console.error('Error loading documents:', err)
-    });
-  }
-
-  onFileSelected(event: any) {
-    this.selectedFile = event.target.files[0];
-  }
-
-  uploadDocument() {
-    if (!this.selectedFile || !this.selectedProject?.id) return;
-
-    this.isUploading = true;
-    this.docsService.upload(this.selectedProject.id, this.selectedFile, this.selectedDocType)
-      .subscribe({
-        next: (doc) => {
-          this.documents.unshift(doc);
-          this.isUploading = false;
-          this.selectedFile = null;
-          // You might want to reset the file input element here if you had a reference
-          this.cdr.detectChanges();
-        },
-        error: (err) => {
-          console.error('Upload failed', err);
-          this.isUploading = false;
-          this.cdr.detectChanges();
-        }
-      });
-  }
-
-  downloadDoc(doc: ProjectDocument) {
-    this.docsService.download(doc.id).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = doc.name; // Backend uses name from ContentHeaders, or we set it here
-        link.click();
-        window.URL.revokeObjectURL(url);
-      },
-      error: (err) => console.error('Download failed', err)
-    });
-  }
-
-  deleteDoc(doc: ProjectDocument) {
-    if (!confirm('Удалить документ ' + doc.name + '?')) return;
-
-    this.docsService.delete(doc.id).subscribe({
-      next: () => {
-        this.documents = this.documents.filter(d => d.id !== doc.id);
-        this.cdr.detectChanges();
-      },
-      error: (err) => console.error('Delete failed', err)
-    });
-  }
-
-  getFriendlyFileSize(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  canCreateProject(): boolean {
+    return this.currentUser?.role === 'БА';
   }
 }
