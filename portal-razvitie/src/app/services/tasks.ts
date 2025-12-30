@@ -9,7 +9,7 @@ import { NotificationService } from './notification.service';
     providedIn: 'root'
 })
 export class TasksService {
-    private apiUrl = 'http://localhost:5068/api/tasks';
+    private apiUrl = 'http://localhost:5000/api/tasks';
 
     constructor(
         private http: HttpClient,

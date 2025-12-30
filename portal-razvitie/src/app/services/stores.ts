@@ -7,7 +7,7 @@ import { Store } from '../models/store.model';
   providedIn: 'root'
 })
 export class StoresService {
-  private apiUrl = 'http://localhost:5068/api/stores';
+  private apiUrl = 'http://localhost:5000/api/stores';
 
   constructor(private http: HttpClient) { }
 

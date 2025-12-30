@@ -85,7 +85,10 @@ export class ProjectsComponent implements OnInit {
 
   loadStores() {
     this.storesService.getStores().subscribe({
-      next: (data) => this.stores = data,
+      next: (data) => {
+        this.stores = data;
+        console.log('Loaded stores from API:', data.length, 'First store ID:', data[0]?.id);
+      },
       error: (err) => console.error('Error loading stores:', err)
     });
   }
@@ -118,7 +121,7 @@ export class ProjectsComponent implements OnInit {
     }
 
     const project: Project = {
-      storeId: this.selectedStoreId,
+      storeId: Number(this.selectedStoreId),
       projectType: this.newProject.projectType!,
       status: this.newProject.status || 'Создан',
       gisCode: this.newProject.gisCode!,
@@ -190,6 +193,7 @@ export class ProjectsComponent implements OnInit {
   }
 
   canCreateProject(): boolean {
-    return this.currentUser?.role === 'БА';
+    // БА и МРиЗ могут создавать проекты
+    return this.currentUser?.role === 'БА' || this.currentUser?.role === 'МРиЗ';
   }
 }

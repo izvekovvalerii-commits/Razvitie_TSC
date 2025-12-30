@@ -1155,12 +1155,29 @@ export class ProjectDetailsComponent implements OnInit {
     }
 
     canEditTask(task: ProjectTask): boolean {
-        // Получаем текущего пользователя из AuthService
         const currentUser = this.getCurrentUser();
         if (!currentUser) return false;
 
-        // Все авторизованные пользователи могут просматривать любые задачи
-        return true;
+        // БА (Бизнес-администратор) имеет полные права на управление проектом
+        if (currentUser.role === 'БА') return true;
+
+        // Если задача назначена конкретному пользователю по ID
+        if (task.responsibleUserId) {
+            return task.responsibleUserId === currentUser.id;
+        }
+
+        // Если задача назначена на роль (МП, МРиЗ и т.д.)
+        if (task.responsible === currentUser.role) {
+            return true;
+        }
+
+        // Если ответственный указан по имени, проверяем соответствует ли роль пользователя роли ответственного
+        const taskRole = this.getRoleByName(task.responsible);
+        if (taskRole === currentUser.role) {
+            return true;
+        }
+
+        return false;
     }
 
     private getCurrentUser() {
